@@ -1,0 +1,1183 @@
+openapi: 3.0.3
+info:
+  title: Warehouse Receiving System (WRS) API
+  description: |
+    Spesifikasi REST API untuk Warehouse Receiving System (WRS).
+    Mendukung alur kerja penerimaan barang gudang berbasis Specification-Driven Development (SDD),
+    mencegah over-receiving, menjamin integritas data secara ACID, dan menyediakan audit trail permanen.
+  version: 1.0.0
+  contact:
+    name: Core Architecture Team
+    email: architect@warehouse-system.internal
+
+servers:
+  - url: http://localhost:5000/api/v1
+    description: Local Development Server
+  - url: https://staging-wrs.internal/api/v1
+    description: Staging Environment Server
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Authentication
+    description: Layanan login, inspeksi token, dan sesi pengguna
+  - name: Products
+    description: Pengelolaan master data produk dan katalog barang
+  - name: Receiving Documents
+    description: Manajemen dokumen penerimaan barang gudang
+  - name: Receiving Items
+    description: Pencatatan eksekusi penerimaan fisik item (parsial / penuh)
+  - name: Inventory
+    description: Pemantauan saldo stok fisik gudang
+  - name: Audit & Transactions
+    description: Jejak audit riwayat mutasi stok dan kartu inventaris
+
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login pengguna dan penerbitan JWT
+      description: Memverifikasi username dan password serta mengembalikan access token dan refresh token.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Autentikasi berhasil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Parameter request tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '401':
+          description: Kredensial tidak valid (username atau password salah)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Pembaruan access token
+      description: Menukar refresh token valid untuk mendapatkan access token baru tanpa perlu login ulang.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Token baru berhasil diterbitkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshTokenResponse'
+        '401':
+          description: Refresh token kedaluwarsa atau tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Informasi profil pengguna saat ini
+      description: Mengembalikan data identitas dan role pengguna berdasarkan access token aktif.
+      responses:
+        '200':
+          description: Profil pengguna berhasil diambil
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: Akses ditolak karena token tidak ada atau tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /products:
+    get:
+      tags:
+        - Products
+      summary: Daftar master produk
+      description: Menampilkan daftar produk dengan filter pencarian dan pagination.
+      parameters:
+        - name: search
+          in: query
+          description: Kata kunci pencarian pada SKU atau nama produk
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Nomor halaman (default 1)
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          description: Jumlah baris per halaman (default 20, max 100)
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        '200':
+          description: Daftar produk berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductListResponse'
+        '401':
+          description: Tidak terautentikasi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - Products
+      summary: Tambah produk baru (Hanya Supervisor)
+      description: Mendaftarkan master produk baru. SKU harus unik dan berformat huruf kapital.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+      responses:
+        '201':
+          description: Produk berhasil didaftarkan
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Product'
+        '400':
+          description: Validasi skema gagal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '403':
+          description: Akses ditolak (bukan Supervisor)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: SKU produk telah terdaftar sebelumnya
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /products/{id}:
+    get:
+      tags:
+        - Products
+      summary: Detail produk berdasarkan ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: UUID produk
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detail data produk
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Product'
+        '404':
+          description: Produk tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags:
+        - Products
+      summary: Perbarui data produk (Hanya Supervisor)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: UUID produk
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProductRequest'
+      responses:
+        '200':
+          description: Produk berhasil diperbarui
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Product'
+        '403':
+          description: Akses ditolak (bukan Supervisor)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Produk tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /receiving-documents:
+    get:
+      tags:
+        - Receiving Documents
+      summary: Daftar dokumen receiving
+      description: Mengambil daftar dokumen penerimaan barang dengan filter status dan pagination.
+      parameters:
+        - name: status
+          in: query
+          description: Filter status dokumen
+          schema:
+            $ref: '#/components/schemas/DocumentStatus'
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Daftar dokumen receiving
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ReceivingDocumentSummary'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+
+    post:
+      tags:
+        - Receiving Documents
+      summary: Buat dokumen receiving baru (Hanya Supervisor)
+      description: Membuat dokumen baru berstatus DRAFT dan mendaftarkan item-item yang diharapkan tiba.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReceivingDocumentRequest'
+      responses:
+        '201':
+          description: Dokumen receiving berhasil dibuat
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/ReceivingDocument'
+        '400':
+          description: Validasi payload gagal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '403':
+          description: Akses ditolak (bukan Supervisor)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Nomor dokumen sudah ada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /receiving-documents/{id}:
+    get:
+      tags:
+        - Receiving Documents
+      summary: Detail lengkap dokumen receiving
+      description: Mengembalikan dokumen lengkap beserta daftar seluruh baris item, progres penerimaan, dan status saat ini.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: UUID dokumen receiving
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detail dokumen receiving
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/ReceivingDocument'
+        '404':
+          description: Dokumen receiving tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /receiving-documents/{id}/items/{itemId}/receive:
+    post:
+      tags:
+        - Receiving Items
+      summary: Catat penerimaan fisik item (Parsial / Penuh)
+      description: |
+        Mencatat kuantitas barang fisik yang diterima.
+        Menerapkan transaksi atomik ACID:
+        - Mengunci baris item dan inventaris (pessimistic locking).
+        - Menolak over-receiving jika (received + increment > expected).
+        - Menambah saldo inventaris dan mencatat kartu stok secara atomik.
+        - Memperbarui status dokumen menjadi IN_PROGRESS jika sebelumnya DRAFT.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: UUID dokumen receiving
+          schema:
+            type: string
+            format: uuid
+        - name: itemId
+          in: path
+          required: true
+          description: UUID receiving item
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReceiveItemRequest'
+      responses:
+        '200':
+          description: Penerimaan item berhasil dibukukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReceiveItemResponse'
+        '400':
+          description: Kuantitas increment tidak valid (misal <= 0)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '404':
+          description: Dokumen atau item tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Dokumen sudah berstatus COMPLETED (tidak dapat menerima item lagi)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Over-receiving terdeteksi dan ditolak oleh validasi bisnis
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /receiving-documents/{id}/complete:
+    post:
+      tags:
+        - Receiving Documents
+      summary: Selesaikan & Kunci dokumen receiving (Hanya Supervisor)
+      description: |
+        Menutup dokumen receiving secara permanen (status menjadi COMPLETED).
+        Hanya dapat diproses jika SELURUH item di dalam dokumen telah berstatus COMPLETED (received_quantity == expected_quantity).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: UUID dokumen receiving
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Dokumen receiving berhasil ditutup (COMPLETED)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompleteDocumentResponse'
+        '400':
+          description: Masih terdapat item yang belum diterima lengkap
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncompleteDocumentErrorResponse'
+        '403':
+          description: Akses ditolak (hanya Supervisor yang berhak menutup dokumen)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Dokumen tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Dokumen sudah dalam status COMPLETED sebelumnya
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /inventory:
+    get:
+      tags:
+        - Inventory
+      summary: Daftar saldo inventaris gudang
+      description: Menampilkan saldo fisik terkini per produk dengan pencarian SKU/nama dan pagination.
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Daftar inventaris berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryListResponse'
+        '401':
+          description: Tidak terautentikasi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /inventory/{productId}:
+    get:
+      tags:
+        - Inventory
+      summary: Saldo inventaris spesifik produk
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          description: UUID produk
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Saldo inventaris produk
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/InventoryItem'
+        '404':
+          description: Produk tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /inventory/transactions:
+    get:
+      tags:
+        - Audit & Transactions
+      summary: Log audit kartu stok / transaksi inventaris (Hanya Supervisor)
+      description: Menampilkan jejak transaksi perpindahan stok yang immutable untuk audit compliance.
+      parameters:
+        - name: productId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: receivingDocumentId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Daftar log transaksi audit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionListResponse'
+        '403':
+          description: Akses ditolak (bukan Supervisor)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Gunakan token JWT yang diperoleh dari endpoint /auth/login
+
+  schemas:
+    UserRole:
+      type: string
+      enum:
+        - OPERATOR
+        - SUPERVISOR
+      example: OPERATOR
+
+    DocumentStatus:
+      type: string
+      enum:
+        - DRAFT
+        - IN_PROGRESS
+        - COMPLETED
+      example: IN_PROGRESS
+
+    ItemStatus:
+      type: string
+      enum:
+        - PENDING
+        - PARTIAL
+        - COMPLETED
+      example: PARTIAL
+
+    TransactionType:
+      type: string
+      enum:
+        - INBOUND_RECEIVING
+      example: INBOUND_RECEIVING
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 4a2f8d38-a28c-4f73-9a72-74780df7a251
+        username:
+          type: string
+          example: spv_hendra
+        role:
+          $ref: '#/components/schemas/UserRole'
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-10-24T08:30:00Z'
+
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          example: spv_hendra
+        password:
+          type: string
+          format: password
+          example: P@ssw0rdSecure!
+
+    LoginResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        access_token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        refresh_token:
+          type: string
+          example: d97a06a2-97fd-4f51-bdfc-27943ce044cf
+        user:
+          $ref: '#/components/schemas/User'
+
+    RefreshTokenRequest:
+      type: object
+      required:
+        - refresh_token
+      properties:
+        refresh_token:
+          type: string
+          example: d97a06a2-97fd-4f51-bdfc-27943ce044cf
+
+    RefreshTokenResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        access_token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: f5e207b9-6330-4e3a-b8cb-2b7e19574be9
+        sku:
+          type: string
+          example: ELEC-MON-27-4K
+        name:
+          type: string
+          example: Monitor 27 Inch 4K UHD UltraSharp
+        description:
+          type: string
+          example: Monitor panel IPS 4K HDR dengan port USB-C
+        unit:
+          type: string
+          example: UNIT
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateProductRequest:
+      type: object
+      required:
+        - sku
+        - name
+        - unit
+      properties:
+        sku:
+          type: string
+          minLength: 3
+          maxLength: 64
+          example: ELEC-MON-27-4K
+        name:
+          type: string
+          minLength: 2
+          maxLength: 255
+          example: Monitor 27 Inch 4K UHD UltraSharp
+        description:
+          type: string
+          example: Monitor panel IPS 4K HDR dengan port USB-C
+        unit:
+          type: string
+          maxLength: 20
+          example: UNIT
+
+    UpdateProductRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Monitor 27 Inch 4K UHD UltraSharp Revision 2
+        description:
+          type: string
+          example: Spesifikasi telah diperbarui dengan dudukan swivel
+        unit:
+          type: string
+          example: UNIT
+
+    ProductListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    ReceivingItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 18b06604-ee9f-43b5-901b-c6b2da7bf71a
+        receiving_document_id:
+          type: string
+          format: uuid
+          example: 9ac389a6-7d12-4299-8cfb-665e7d58a5be
+        product_id:
+          type: string
+          format: uuid
+          example: f5e207b9-6330-4e3a-b8cb-2b7e19574be9
+        sku:
+          type: string
+          example: ELEC-MON-27-4K
+        product_name:
+          type: string
+          example: Monitor 27 Inch 4K UHD UltraSharp
+        unit:
+          type: string
+          example: UNIT
+        expected_quantity:
+          type: integer
+          example: 50
+        received_quantity:
+          type: integer
+          example: 30
+        remaining_quantity:
+          type: integer
+          example: 20
+        status:
+          $ref: '#/components/schemas/ItemStatus'
+        updated_at:
+          type: string
+          format: date-time
+
+    ReceivingDocument:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 9ac389a6-7d12-4299-8cfb-665e7d58a5be
+        doc_number:
+          type: string
+          example: RCV-20261024-0001
+        status:
+          $ref: '#/components/schemas/DocumentStatus'
+        supervisor_id:
+          type: string
+          format: uuid
+        supervisor_username:
+          type: string
+          example: spv_hendra
+        total_items:
+          type: integer
+          example: 3
+        completed_items:
+          type: integer
+          example: 1
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReceivingItem'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ReceivingDocumentSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        doc_number:
+          type: string
+          example: RCV-20261024-0001
+        status:
+          $ref: '#/components/schemas/DocumentStatus'
+        supervisor_username:
+          type: string
+          example: spv_hendra
+        total_items:
+          type: integer
+          example: 3
+        completed_items:
+          type: integer
+          example: 1
+        created_at:
+          type: string
+          format: date-time
+
+    CreateReceivingItemInput:
+      type: object
+      required:
+        - product_id
+        - expected_quantity
+      properties:
+        product_id:
+          type: string
+          format: uuid
+        expected_quantity:
+          type: integer
+          minimum: 1
+          example: 100
+
+    CreateReceivingDocumentRequest:
+      type: object
+      required:
+        - doc_number
+        - items
+      properties:
+        doc_number:
+          type: string
+          minLength: 5
+          maxLength: 64
+          example: RCV-20261024-0001
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/CreateReceivingItemInput'
+
+    ReceiveItemRequest:
+      type: object
+      required:
+        - increment_quantity
+      properties:
+        increment_quantity:
+          type: integer
+          minimum: 1
+          example: 25
+          description: Kuantitas fisik barang yang diserahkan pada batch saat ini
+
+    ReceiveItemResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Quantity successfully received and inventory updated
+        data:
+          type: object
+          properties:
+            item_id:
+              type: string
+              format: uuid
+            product_id:
+              type: string
+              format: uuid
+            increment_quantity:
+              type: integer
+              example: 25
+            total_received:
+              type: integer
+              example: 55
+            expected_quantity:
+              type: integer
+              example: 100
+            remaining_quantity:
+              type: integer
+              example: 45
+            item_status:
+              $ref: '#/components/schemas/ItemStatus'
+            document_status:
+              $ref: '#/components/schemas/DocumentStatus'
+            current_on_hand_stock:
+              type: integer
+              example: 155
+
+    CompleteDocumentResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Receiving document has been successfully verified and marked as COMPLETED
+        data:
+          type: object
+          properties:
+            document_id:
+              type: string
+              format: uuid
+            doc_number:
+              type: string
+              example: RCV-20261024-0001
+            status:
+              type: string
+              example: COMPLETED
+            completed_at:
+              type: string
+              format: date-time
+
+    InventoryItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        product_id:
+          type: string
+          format: uuid
+        sku:
+          type: string
+          example: ELEC-MON-27-4K
+        product_name:
+          type: string
+          example: Monitor 27 Inch 4K UHD UltraSharp
+        unit:
+          type: string
+          example: UNIT
+        quantity:
+          type: integer
+          example: 120
+        updated_at:
+          type: string
+          format: date-time
+
+    InventoryListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/InventoryItem'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    InventoryTransaction:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        product_id:
+          type: string
+          format: uuid
+        sku:
+          type: string
+          example: ELEC-MON-27-4K
+        product_name:
+          type: string
+          example: Monitor 27 Inch 4K UHD UltraSharp
+        receiving_document_id:
+          type: string
+          format: uuid
+        doc_number:
+          type: string
+          example: RCV-20261024-0001
+        type:
+          $ref: '#/components/schemas/TransactionType'
+        quantity:
+          type: integer
+          example: 25
+        created_by:
+          type: string
+          format: uuid
+        operator_username:
+          type: string
+          example: op_budi
+        created_at:
+          type: string
+          format: date-time
+
+    TransactionListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/InventoryTransaction'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    PaginationMeta:
+      type: object
+      properties:
+        total:
+          type: integer
+          example: 125
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        total_pages:
+          type: integer
+          example: 7
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Over-receiving forbidden. Maximum allowed increment is 10, but requested 15.
+        code:
+          type: string
+          example: OVER_RECEIVING_FORBIDDEN
+
+    ValidationErrorDetail:
+      type: object
+      properties:
+        field:
+          type: string
+          example: increment_quantity
+        message:
+          type: string
+          example: Expected integer greater than 0
+
+    ValidationErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Invalid input parameters
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationErrorDetail'
+
+    IncompleteItemDetail:
+      type: object
+      properties:
+        item_id:
+          type: string
+          format: uuid
+          example: 18b06604-ee9f-43b5-901b-c6b2da7bf71a
+        sku:
+          type: string
+          example: ELEC-MON-27-4K
+        product_name:
+          type: string
+          example: Monitor 27 Inch 4K UHD UltraSharp
+        expected_quantity:
+          type: integer
+          example: 50
+        received_quantity:
+          type: integer
+          example: 30
+        remaining_quantity:
+          type: integer
+          example: 20
+        status:
+          type: string
+          example: PARTIAL
+
+    IncompleteDocumentErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Cannot complete receiving document: one or more items are not fully received.
+        incomplete_items:
+          type: array
+          items:
+            $ref: '#/components/schemas/IncompleteItemDetail'

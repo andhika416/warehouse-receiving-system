@@ -1,0 +1,71 @@
+erDiagram
+    %% ========================================================
+    %% Warehouse Receiving System (WRS) - Entity Relationship
+    %% Database Engine: PostgreSQL 15+
+    %% Specification-Driven Development
+    %% ========================================================
+
+    users {
+        uuid id PK "Primary Key (UUID v4)"
+        varchar username UK "Unique username, min 3 max 50"
+        varchar password_hash "Bcrypt hash cost 12"
+        varchar role "Role enum: OPERATOR or SUPERVISOR"
+        timestamptz created_at "Record creation timestamp"
+        timestamptz updated_at "Record last update timestamp"
+    }
+
+    products {
+        uuid id PK "Primary Key (UUID v4)"
+        varchar sku UK "Unique Stock Keeping Unit, uppercase"
+        varchar name "Descriptive product name"
+        text description "Detailed product specification"
+        varchar unit "Measurement unit e.g. PCS, BOX, KG"
+        timestamptz created_at "Record creation timestamp"
+        timestamptz updated_at "Record last update timestamp"
+    }
+
+    inventories {
+        uuid id PK "Primary Key (UUID v4)"
+        uuid product_id FK, UK "1-to-1 unique mapping to products"
+        integer quantity "Current on-hand physical balance >= 0"
+        timestamptz updated_at "Last stock mutation timestamp"
+    }
+
+    receiving_documents {
+        uuid id PK "Primary Key (UUID v4)"
+        varchar doc_number UK "Unique formal document number (e.g. RCV-YYYYMMDD-XXXX)"
+        varchar status "Status enum: DRAFT, IN_PROGRESS, COMPLETED"
+        uuid supervisor_id FK "References users(id) who created/manages"
+        timestamptz created_at "Document creation timestamp"
+        timestamptz updated_at "Status or item change timestamp"
+    }
+
+    receiving_items {
+        uuid id PK "Primary Key (UUID v4)"
+        uuid receiving_document_id FK "References receiving_documents(id)"
+        uuid product_id FK "References products(id)"
+        integer expected_quantity "Planned inbound quantity > 0"
+        integer received_quantity "Accumulated received physical count >= 0"
+        varchar status "Item status: PENDING, PARTIAL, COMPLETED"
+        timestamptz created_at "Record creation timestamp"
+        timestamptz updated_at "Last receipt update timestamp"
+    }
+
+    inventory_transactions {
+        uuid id PK "Primary Key (UUID v4)"
+        uuid product_id FK "References products(id)"
+        uuid receiving_document_id FK "Source document reference"
+        varchar type "Transaction classification: INBOUND_RECEIVING"
+        integer quantity "Transaction quantity delta > 0"
+        uuid created_by FK "References users(id) who physically executed"
+        timestamptz created_at "Immutable transaction timestamp"
+    }
+
+    %% Relationships and Cardinalities
+    users ||--o{ receiving_documents : "supervises / creates"
+    users ||--o{ inventory_transactions : "performs"
+    products ||--|| inventories : "maintains stock balance"
+    products ||--o{ receiving_items : "specified in"
+    products ||--o{ inventory_transactions : "mutated by"
+    receiving_documents ||--|{ receiving_items : "contains line items"
+    receiving_documents ||--o{ inventory_transactions : "generates audit records"
