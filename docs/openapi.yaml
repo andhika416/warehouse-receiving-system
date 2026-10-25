@@ -280,6 +280,52 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+    delete:
+      tags:
+        - Products
+      summary: Hapus produk berdasarkan ID (Hanya Supervisor)
+      description: Menghapus produk dari sistem secara permanen jika belum memiliki transaksi stok aktif.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: UUID produk yang akan dihapus
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Produk berhasil dihapus
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Product deleted successfully"
+        '400':
+          description: Produk tidak dapat dihapus karena memiliki saldo fisik aktif atau dokumen referensi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Akses ditolak (bukan Supervisor)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Produk tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /receiving-documents:
     get:
       tags:

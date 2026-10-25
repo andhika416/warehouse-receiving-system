@@ -1,30 +1,39 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../api/client.js';
-import type { ReceivingDocumentSummary, Product } from '../types/index.js';
+import type { ReceivingDocumentSummary, ReceivingDocumentDetail, Product } from '../types/index.js';
 import { StatusBadge } from '../components/StatusBadge.js';
 import { Modal } from '../components/Modal.js';
+import { Pagination } from '../components/Pagination.js';
 import { useAuth } from '../context/AuthContext.js';
+import { ReceivingDetailPage } from './ReceivingDetailPage.js';
+import { printGoodsReceipt } from '../utils/printReceipt.js';
 import {
   Truck,
   Plus,
   RefreshCw,
-  ChevronRight,
   FileText,
   User,
   Trash2,
   CheckCircle2,
   Clock,
+  Search,
+  X,
+  PackageOpen,
+  Eye,
+  Printer,
 } from 'lucide-react';
 
 interface ReceivingsPageProps {
-  onSelectDocument: (docId: string) => void;
+  selectedDocId?: string | null;
+  onClearSelectedDocId?: () => void;
   isCreateModalOpen: boolean;
   setIsCreateModalOpen: (open: boolean) => void;
   onNotify: (type: 'success' | 'error' | 'warning', message: string) => void;
 }
 
 export const ReceivingsPage: React.FC<ReceivingsPageProps> = ({
-  onSelectDocument,
+  selectedDocId,
+  onClearSelectedDocId,
   isCreateModalOpen,
   setIsCreateModalOpen,
   onNotify,
@@ -35,6 +44,38 @@ export const ReceivingsPage: React.FC<ReceivingsPageProps> = ({
   const [documents, setDocuments] = useState<ReceivingDocumentSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
+  const [search, setSearch] = useState('');
+
+  // Active detail modal state (opens as a popup without route change!)
+  const [activeDetailDocId, setActiveDetailDocId] = useState<string | null>(selectedDocId || null);
+
+  // Print Goods Receipt Slip states (hanya untuk dokumen yang sudah konfirmasi / COMPLETED)
+  const [printSlipDoc, setPrintSlipDoc] = useState<ReceivingDocumentDetail | null>(null);
+  const [isPrintSlipOpen, setIsPrintSlipOpen] = useState(false);
+  const [loadingPrintSlip, setLoadingPrintSlip] = useState(false);
+
+  const handleOpenPrintSlip = async (docId: string) => {
+    setLoadingPrintSlip(true);
+    setIsPrintSlipOpen(true);
+    try {
+      const res = await api.get(`/receivings/${docId}`);
+      if (res.data.success) {
+        setPrintSlipDoc(res.data.data);
+      }
+    } catch {
+      onNotify('error', 'Gagal memuat rincian bukti penerimaan barang.');
+      setIsPrintSlipOpen(false);
+    } finally {
+      setLoadingPrintSlip(false);
+    }
+  };
+
+  // Sync external selection (e.g. from notification click)
+  useEffect(() => {
+    if (selectedDocId) {
+      setActiveDetailDocId(selectedDocId);
+    }
+  }, [selectedDocId]);
 
   // Products for Document Creation modal
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
@@ -45,7 +86,7 @@ export const ReceivingsPage: React.FC<ReceivingsPageProps> = ({
   const fetchDocuments = async () => {
     setLoading(true);
     try {
-      const params: any = { limit: 50 };
+      const params: any = { limit: 100 };
       if (filterStatus !== 'ALL') {
         params.status = filterStatus;
       }
@@ -54,7 +95,7 @@ export const ReceivingsPage: React.FC<ReceivingsPageProps> = ({
         setDocuments(res.data.data);
       }
     } catch {
-      onNotify('error', 'Gagal memuat daftar dokumen receiving.');
+      onNotify('error', 'Gagal memuat daftar dokumen penerimaan barang.');
     } finally {
       setLoading(false);
     }
@@ -88,6 +129,31 @@ export const ReceivingsPage: React.FC<ReceivingsPageProps> = ({
     }
   }, [isCreateModalOpen]);
 
+  // Client-side search filtering
+  const filteredDocuments = useMemo(() => {
+    if (!search.trim()) return documents;
+    const q = search.trim().toLowerCase();
+    return documents.filter(
+      (doc) =>
+        doc.doc_number.toLowerCase().includes(q) ||
+        (doc.supervisor_username && doc.supervisor_username.toLowerCase().includes(q))
+    );
+  }, [documents, search]);
+
+  // Pagination states (5 items per page / layer)
+  const PAGE_SIZE = 5;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset to page 1 whenever search query or status filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, filterStatus]);
+
+  const paginatedDocuments = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filteredDocuments.slice(start, start + PAGE_SIZE);
+  }, [filteredDocuments, currentPage]);
+
   const handleAddItemRow = () => {
     if (availableProducts.length > 0) {
       setDocItems([...docItems, { productId: availableProducts[0].id, expectedQuantity: 10 }]);
@@ -113,7 +179,7 @@ export const ReceivingsPage: React.FC<ReceivingsPageProps> = ({
       return;
     }
     if (docItems.length === 0) {
-      onNotify('warning', 'Dokumen harus memiliki setidaknya satu item.');
+      onNotify('warning', 'Dokumen harus memiliki setidaknya satu item barang.');
       return;
     }
 
@@ -128,10 +194,11 @@ export const ReceivingsPage: React.FC<ReceivingsPageProps> = ({
       });
 
       if (res.data.success) {
-        onNotify('success', `Dokumen ${docNumber} berhasil dibuat dengan status DRAFT!`);
+        onNotify('success', `Dokumen ${docNumber} berhasil diterbitkan dengan status DRAF!`);
         setIsCreateModalOpen(false);
         fetchDocuments();
-        onSelectDocument(res.data.data.id);
+        // Immediately open the detail modal for this newly created document!
+        setActiveDetailDocId(res.data.data.id);
       }
     } catch (err: any) {
       const msg = err.response?.data?.message || 'Gagal membuat dokumen receiving.';
@@ -147,135 +214,172 @@ export const ReceivingsPage: React.FC<ReceivingsPageProps> = ({
   const completedCount = documents.filter((d) => d.status === 'COMPLETED').length;
 
   return (
-    <div className="space-y-6">
-      {/* Top Action bar */}
+    <div className="space-y-6 font-sans text-slate-900 pb-12">
+      {/* 1. Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Truck className="w-5 h-5 text-emerald-400" />
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700">
+              <Truck className="w-5 h-5" />
+            </div>
             <span>Dokumen Penerimaan Barang (Receiving)</span>
-          </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Daftar pengiriman barang vendor masuk ke area verifikasi fisik gudang
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Manifes penerimaan fisik barang masuk dari vendor dan pemasok
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={fetchDocuments}
-            title="Refresh Data"
-            className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition"
+            title="Muat Ulang Dokumen"
+            className="p-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition shadow-sm cursor-pointer"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-400' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-600' : ''}`} />
           </button>
 
           {isSupervisor && (
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="flex items-center gap-1.5 py-2 px-3.5 rounded-xl font-semibold text-xs bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/20 transition transform active:scale-95"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-sm hover:shadow transition transform active:scale-[0.99] cursor-pointer"
             >
               <Plus className="w-4 h-4" />
-              <span>Buat Dokumen Baru</span>
+              <span>+ Buat Dokumen Baru</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* KPI Cards */}
+      {/* 2. KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="glass-panel p-4 rounded-2xl border border-slate-800 flex items-center justify-between">
+        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center justify-between">
           <div>
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Total Dokumen
-            </div>
-            <div className="text-2xl font-bold text-white mt-1 font-mono">{totalCount}</div>
+            <div className="text-xs font-medium text-slate-500">Total Dokumen Penerimaan</div>
+            <div className="text-2xl font-bold text-slate-900 mt-0.5 font-mono">{totalCount} Dokumen</div>
           </div>
-          <div className="p-2.5 rounded-xl bg-slate-800 text-slate-300">
+          <div className="w-10 h-10 rounded-lg bg-slate-50 border border-slate-200/70 flex items-center justify-center text-slate-600">
             <FileText className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="glass-panel p-4 rounded-2xl border border-slate-800 flex items-center justify-between">
+        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center justify-between">
           <div>
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Sedang Berjalan (In Progress)
-            </div>
-            <div className="text-2xl font-bold text-amber-400 mt-1 font-mono">
-              {inProgressCount}
+            <div className="text-xs font-medium text-slate-500">Sedang Berjalan (In Progress)</div>
+            <div className="text-2xl font-bold text-amber-600 mt-0.5 font-mono">
+              {inProgressCount} Dokumen
             </div>
           </div>
-          <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+          <div className="w-10 h-10 rounded-lg bg-amber-50 border border-amber-200/70 flex items-center justify-center text-amber-600">
             <Clock className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="glass-panel p-4 rounded-2xl border border-slate-800 flex items-center justify-between">
+        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center justify-between">
           <div>
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Selesai (Completed)
-            </div>
-            <div className="text-2xl font-bold text-emerald-400 mt-1 font-mono">
-              {completedCount}
+            <div className="text-xs font-medium text-slate-500">Selesai Diverifikasi (Completed)</div>
+            <div className="text-2xl font-bold text-emerald-600 mt-0.5 font-mono">
+              {completedCount} Dokumen
             </div>
           </div>
-          <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <div className="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-200/70 flex items-center justify-center text-emerald-600">
             <CheckCircle2 className="w-5 h-5" />
           </div>
         </div>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-800/80 pb-3">
-        {['ALL', 'DRAFT', 'IN_PROGRESS', 'COMPLETED'].map((status) => (
-          <button
-            key={status}
-            onClick={() => setFilterStatus(status)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
-              filterStatus === status
-                ? 'bg-slate-800 text-white border border-slate-700 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
-            }`}
-          >
-            {status === 'ALL'
-              ? 'Semua Status'
-              : status === 'IN_PROGRESS'
-              ? 'In Progress'
-              : status.charAt(0) + status.slice(1).toLowerCase()}
-          </button>
-        ))}
+      {/* 3. Filter Bar & Search Toolbar */}
+      <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+        {/* Left: Search input */}
+        <div className="relative flex-1 max-w-lg">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5 pointer-events-none" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cari berdasarkan No. Dokumen (RCV-...) atau nama supervisor..."
+            className="w-full pl-10 pr-9 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition shadow-inner"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 cursor-pointer"
+              title="Hapus pencarian"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Right: Status filter buttons */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {[
+            { id: 'ALL', label: 'Semua Status' },
+            { id: 'DRAFT', label: 'Draf' },
+            { id: 'IN_PROGRESS', label: 'Sedang Berjalan' },
+            { id: 'COMPLETED', label: 'Selesai' },
+          ].map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setFilterStatus(item.id)}
+              className={`px-3 py-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                filterStatus === item.id
+                  ? 'bg-slate-900 text-white shadow-sm'
+                  : 'bg-slate-50 text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Documents Table */}
-      <div className="glass-panel rounded-2xl border border-slate-800 overflow-hidden shadow-xl">
+      {/* 4. Documents Table */}
+      <div className="bg-white rounded-xl border border-slate-200/90 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-900/90 text-slate-400 border-b border-slate-800 uppercase tracking-wider font-semibold">
+          <table className="w-full text-left text-sm border-collapse">
+            <thead className="bg-slate-50/90 border-b border-slate-200 text-xs font-semibold uppercase tracking-wider text-slate-600">
               <tr>
-                <th className="py-3.5 px-4">No. Dokumen</th>
-                <th className="py-3.5 px-4">Status</th>
-                <th className="py-3.5 px-4">Kelengkapan Item</th>
-                <th className="py-3.5 px-4">Supervisor</th>
-                <th className="py-3.5 px-4">Tanggal Dibuat</th>
-                <th className="py-3.5 px-4 text-right">Aksi</th>
+                <th className="py-3.5 px-5">No. Dokumen</th>
+                <th className="py-3.5 px-5">Status</th>
+                <th className="py-3.5 px-5">Kelengkapan Item</th>
+                <th className="py-3.5 px-5">Supervisor</th>
+                <th className="py-3.5 px-5">Tanggal Dibuat</th>
+                <th className="py-3.5 px-5 text-center w-28">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-slate-100">
               {loading && documents.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-slate-500">
-                    <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-emerald-400" />
-                    Memuat dokumen receiving...
+                  <td colSpan={6} className="py-12 text-center text-slate-500">
+                    <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-emerald-600" />
+                    <p className="text-sm font-medium">Memuat data dokumen penerimaan barang...</p>
                   </td>
                 </tr>
-              ) : documents.length === 0 ? (
+              ) : filteredDocuments.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-slate-500">
-                    <Truck className="w-8 h-8 mx-auto mb-2 text-slate-600" />
-                    Tidak ada dokumen penerimaan yang cocok.
+                  <td colSpan={6} className="py-12 text-center text-slate-500">
+                    <PackageOpen className="w-10 h-10 mx-auto mb-2 text-slate-300" />
+                    <p className="text-base font-semibold text-slate-700">Tidak ada dokumen penerimaan yang sesuai</p>
+                    <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                      {search || filterStatus !== 'ALL'
+                        ? 'Coba hapus kata kunci pencarian atau ganti filter status dokumen.'
+                        : 'Belum ada dokumen yang dibuat. Supervisor dapat menerbitkan dokumen baru.'}
+                    </p>
+                    {(search || filterStatus !== 'ALL') && (
+                      <button
+                        onClick={() => {
+                          setSearch('');
+                          setFilterStatus('ALL');
+                        }}
+                        className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition cursor-pointer"
+                      >
+                        Atur Ulang Filter
+                      </button>
+                    )}
                   </td>
                 </tr>
               ) : (
-                documents.map((doc) => {
+                paginatedDocuments.map((doc) => {
                   const percent =
                     doc.total_items > 0
                       ? Math.round((doc.completed_items / doc.total_items) * 100)
@@ -284,50 +388,79 @@ export const ReceivingsPage: React.FC<ReceivingsPageProps> = ({
                   return (
                     <tr
                       key={doc.id}
-                      onClick={() => onSelectDocument(doc.id)}
-                      className="hover:bg-slate-900/60 cursor-pointer transition group"
+                      onClick={() => setActiveDetailDocId(doc.id)}
+                      className="hover:bg-slate-50/80 cursor-pointer transition group"
                     >
-                      <td className="py-3.5 px-4">
-                        <div className="font-mono font-semibold text-emerald-400 group-hover:text-emerald-300 flex items-center gap-2">
-                          <FileText className="w-3.5 h-3.5 text-slate-500" />
+                      <td className="py-4 px-5 align-middle">
+                        <div className="font-mono font-semibold text-emerald-700 group-hover:text-emerald-800 flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-slate-400" />
                           <span>{doc.doc_number}</span>
                         </div>
                       </td>
-                      <td className="py-3.5 px-4">
+                      <td className="py-4 px-5 align-middle">
                         <StatusBadge status={doc.status} />
                       </td>
-                      <td className="py-3.5 px-4">
-                        <div className="w-40">
-                          <div className="flex items-center justify-between text-[11px] mb-1">
-                            <span className="font-mono text-slate-300 font-medium">
-                              {doc.completed_items} / {doc.total_items} Item Selesai
+                      <td className="py-4 px-5 align-middle">
+                        <div className="w-44">
+                          <div className="flex items-center justify-between text-xs mb-1">
+                            <span className="font-mono text-slate-700 font-medium">
+                              {doc.completed_items} / {doc.total_items} Item Tuntas
                             </span>
-                            <span className="font-mono text-slate-400">{percent}%</span>
+                            <span className="font-mono font-semibold text-slate-500">{percent}%</span>
                           </div>
-                          <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                          <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
                             <div
                               className={`h-1.5 rounded-full transition-all duration-500 ${
-                                percent === 100 ? 'bg-emerald-400' : 'bg-amber-400'
+                                percent === 100 ? 'bg-emerald-500' : 'bg-amber-500'
                               }`}
                               style={{ width: `${percent}%` }}
                             />
                           </div>
                         </div>
                       </td>
-                      <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-1.5 text-slate-300">
-                          <User className="w-3 h-3 text-slate-500" />
+                      <td className="py-4 px-5 align-middle">
+                        <div className="flex items-center gap-1.5 text-slate-700 font-medium text-xs">
+                          <User className="w-3.5 h-3.5 text-slate-400" />
                           <span>{doc.supervisor_username}</span>
                         </div>
                       </td>
-                      <td className="py-3.5 px-4 font-mono text-slate-400">
-                        {new Date(doc.created_at).toLocaleDateString('id-ID')}
+                      <td className="py-4 px-5 align-middle font-mono text-xs text-slate-500">
+                        {new Date(doc.created_at).toLocaleDateString('id-ID', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
                       </td>
-                      <td className="py-3.5 px-4 text-right">
-                        <button className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition font-medium group-hover:bg-emerald-500/20 group-hover:text-emerald-300">
-                          <span>Buka Detail</span>
-                          <ChevronRight className="w-3.5 h-3.5" />
-                        </button>
+                      <td className="py-4 px-5 align-middle text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          {/* Cetak Bukti Penerimaan (Hanya muncul jika sudah konfirmasi / COMPLETED) */}
+                          {doc.status === 'COMPLETED' && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenPrintSlip(doc.id);
+                              }}
+                              title="Cetak Bukti Penerimaan Barang (Dokumen Selesai)"
+                              className="p-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300 transition shadow-sm cursor-pointer"
+                            >
+                              <Printer className="w-4 h-4" />
+                            </button>
+                          )}
+
+                          {/* Buka Detail (Icon Mata Saja) */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveDetailDocId(doc.id);
+                            }}
+                            title="Buka Detail Dokumen"
+                            className="p-1.5 rounded-lg border border-slate-200 bg-white group-hover:bg-emerald-50 group-hover:border-emerald-200 text-slate-600 group-hover:text-emerald-700 transition shadow-sm cursor-pointer"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -336,19 +469,186 @@ export const ReceivingsPage: React.FC<ReceivingsPageProps> = ({
             </tbody>
           </table>
         </div>
+
+        {/* Table Pagination Footer */}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredDocuments.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={setCurrentPage}
+          itemLabel="dokumen"
+        />
       </div>
 
-      {/* Modal Buat Dokumen (Supervisor Only) */}
+      {/* 5. MODAL BUKA DETAIL DOKUMEN RECEIVING (Muncul sebagai Modal, Tidak Pindah Route!) */}
+      <Modal
+        isOpen={!!activeDetailDocId}
+        onClose={() => {
+          setActiveDetailDocId(null);
+          onClearSelectedDocId?.();
+          fetchDocuments();
+        }}
+        title="Rincian Dokumen Penerimaan Barang"
+        maxWidth="5xl"
+        variant="light"
+      >
+        {activeDetailDocId && (
+          <ReceivingDetailPage
+            documentId={activeDetailDocId}
+            onBack={() => {
+              setActiveDetailDocId(null);
+              onClearSelectedDocId?.();
+              fetchDocuments();
+            }}
+            onNotify={onNotify}
+            onUpdated={fetchDocuments}
+            isModal={true}
+          />
+        )}
+      </Modal>
+
+      {/* 6. MODAL CETAK BUKTI PENERIMAAN BARANG (Hanya untuk dokumen terkonfirmasi / COMPLETED) */}
+      <Modal
+        isOpen={isPrintSlipOpen}
+        onClose={() => {
+          setIsPrintSlipOpen(false);
+          setPrintSlipDoc(null);
+        }}
+        title="Surat Bukti Penerimaan Barang (Goods Receipt Slip)"
+        maxWidth="lg"
+        variant="light"
+      >
+        {loadingPrintSlip || !printSlipDoc ? (
+          <div className="py-12 text-center text-slate-500">
+            <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-emerald-600" />
+            <p className="text-xs font-medium">Memuat data bukti penerimaan...</p>
+          </div>
+        ) : (
+          <div className="space-y-4 font-sans text-xs">
+            {/* Printable Container */}
+            <div className="p-6 bg-white border border-slate-300 rounded-xl space-y-4" id="printable-receipt">
+              {/* Header Slip */}
+              <div className="border-b-2 border-slate-900 pb-3 flex items-start justify-between">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 tracking-tight">LOGIFLOW WMS</h3>
+                  <p className="text-xs text-slate-500">Bukti Verifikasi & Tanda Terima Barang Gudang</p>
+                </div>
+                <div className="text-right">
+                  <div className="font-mono font-bold text-sm text-slate-900">{printSlipDoc.doc_number}</div>
+                  <div className="text-[11px] text-slate-500">
+                    {new Date(printSlipDoc.created_at).toLocaleDateString('id-ID', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Meta Information */}
+              <div className="grid grid-cols-2 gap-4 text-xs">
+                <div>
+                  <div className="text-slate-500">Supervisor Penanggung Jawab:</div>
+                  <div className="font-bold text-slate-800">{printSlipDoc.supervisor_username}</div>
+                </div>
+                <div>
+                  <div className="text-slate-500">Status Dokumen:</div>
+                  <div className="font-bold text-emerald-700">
+                    SELESAI (100% LENGKAP & TERKONFIRMASI)
+                  </div>
+                </div>
+              </div>
+
+              {/* Items Table */}
+              <div className="border border-slate-200 rounded-lg overflow-hidden">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="bg-slate-100 border-b border-slate-200 font-semibold text-slate-700">
+                    <tr>
+                      <th className="py-2 px-3">No.</th>
+                      <th className="py-2 px-3">SKU</th>
+                      <th className="py-2 px-3">Nama Produk</th>
+                      <th className="py-2 px-3">Satuan</th>
+                      <th className="py-2 px-3 text-right">Target</th>
+                      <th className="py-2 px-3 text-right">Diterima</th>
+                      <th className="py-2 px-3 text-right">Sisa</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-mono">
+                    {printSlipDoc.items.map((item, idx) => (
+                      <tr key={item.id}>
+                        <td className="py-2 px-3 text-slate-500">{idx + 1}</td>
+                        <td className="py-2 px-3 font-semibold text-slate-800">{item.sku}</td>
+                        <td className="py-2 px-3 font-sans text-slate-900">{item.product_name}</td>
+                        <td className="py-2 px-3">{item.unit}</td>
+                        <td className="py-2 px-3 text-right font-bold">{item.expected_quantity}</td>
+                        <td className="py-2 px-3 text-right font-bold text-emerald-700">{item.received_quantity}</td>
+                        <td className="py-2 px-3 text-right text-slate-500">{item.remaining_quantity}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Signature Blocks */}
+              <div className="grid grid-cols-2 gap-8 pt-8 text-center text-xs">
+                <div>
+                  <div className="text-slate-500 mb-12">Petugas Gudang / Penerima:</div>
+                  <div className="border-t border-slate-400 pt-1 font-semibold text-slate-800">
+                    ( {printSlipDoc.supervisor_username} )
+                  </div>
+                </div>
+                <div>
+                  <div className="text-slate-500 mb-12">Driver / Kurir Pengirim Vendor:</div>
+                  <div className="border-t border-slate-400 pt-1 font-semibold text-slate-800">
+                    ( ........................................ )
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-end gap-3 pt-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsPrintSlipOpen(false);
+                  setPrintSlipDoc(null);
+                }}
+                className="px-4 py-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs transition cursor-pointer"
+              >
+                Tutup
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (printSlipDoc) {
+                    printGoodsReceipt(printSlipDoc);
+                  } else {
+                    window.print();
+                  }
+                }}
+                className="px-5 py-2.5 rounded-lg font-semibold text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition cursor-pointer flex items-center gap-1.5"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Cetak Sekarang (Print)</span>
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* 7. Modal Buat Dokumen Baru (Supervisor Only) */}
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        title="Buat Dokumen Penerimaan Baru (Supervisor)"
+        title="Terbitkan Dokumen Penerimaan Baru"
         maxWidth="lg"
+        variant="light"
       >
-        <form onSubmit={handleCreateDocument} className="space-y-4 text-xs">
+        <form onSubmit={handleCreateDocument} className="space-y-4 text-xs font-sans">
           <div>
-            <label className="block font-semibold text-slate-300 mb-1">
-              Nomor Dokumen Receiving <span className="text-emerald-400">*</span>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              Nomor Dokumen Penerimaan <span className="text-emerald-600">*</span>
             </label>
             <input
               type="text"
@@ -356,39 +656,39 @@ export const ReceivingsPage: React.FC<ReceivingsPageProps> = ({
               value={docNumber}
               onChange={(e) => setDocNumber(e.target.value.toUpperCase())}
               placeholder="Contoh: RCV-20261024-001"
-              className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white font-mono uppercase focus:outline-none focus:border-emerald-500 transition"
+              className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 font-mono text-xs uppercase focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition shadow-sm"
             />
-            <p className="text-[11px] text-slate-500 mt-1">
-              Nomor referensi unik yang menghubungkan manifest vendor atau purchase order.
+            <p className="text-[11px] text-slate-400 mt-1">
+              Nomor unik dokumen yang mengikat surat jalan dari vendor atau Purchase Order (PO).
             </p>
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="font-semibold text-slate-300">
-                Daftar Item & Kuantitas Ekspektasi Masuk <span className="text-emerald-400">*</span>
+              <label className="text-xs font-semibold text-slate-700">
+                Daftar Item & Target Kuantitas Masuk <span className="text-emerald-600">*</span>
               </label>
               <button
                 type="button"
                 onClick={handleAddItemRow}
-                className="flex items-center gap-1 text-emerald-400 hover:text-emerald-300 font-semibold text-[11px]"
+                className="flex items-center gap-1.5 text-emerald-700 hover:text-emerald-800 font-semibold text-xs cursor-pointer bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Tambah Baris Item</span>
+                <span>+ Tambah Baris Item</span>
               </button>
             </div>
 
-            <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+            <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
               {docItems.map((item, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-950 border border-slate-800"
+                  className="flex items-center gap-2.5 p-3 rounded-lg bg-slate-50 border border-slate-200/90"
                 >
                   <div className="flex-1">
                     <select
                       value={item.productId}
                       onChange={(e) => handleItemChange(idx, 'productId', e.target.value)}
-                      className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500 text-xs"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:border-emerald-500 text-xs shadow-sm cursor-pointer"
                     >
                       {availableProducts.map((p) => (
                         <option key={p.id} value={p.id}>
@@ -398,7 +698,7 @@ export const ReceivingsPage: React.FC<ReceivingsPageProps> = ({
                     </select>
                   </div>
 
-                  <div className="w-32">
+                  <div className="w-36">
                     <input
                       type="number"
                       min={1}
@@ -408,7 +708,7 @@ export const ReceivingsPage: React.FC<ReceivingsPageProps> = ({
                         handleItemChange(idx, 'expectedQuantity', Math.max(1, parseInt(e.target.value) || 1))
                       }
                       placeholder="Target Qty"
-                      className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-white font-mono text-right focus:outline-none focus:border-emerald-500 text-xs"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 font-mono text-right focus:outline-none focus:border-emerald-500 text-xs shadow-sm"
                     />
                   </div>
 
@@ -416,7 +716,8 @@ export const ReceivingsPage: React.FC<ReceivingsPageProps> = ({
                     type="button"
                     disabled={docItems.length <= 1}
                     onClick={() => handleRemoveItemRow(idx)}
-                    className="p-1.5 text-slate-500 hover:text-rose-400 disabled:opacity-30 rounded-lg transition"
+                    title="Hapus baris item"
+                    className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-30 rounded-lg transition cursor-pointer"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -425,20 +726,30 @@ export const ReceivingsPage: React.FC<ReceivingsPageProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-800">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 mt-6">
             <button
               type="button"
               onClick={() => setIsCreateModalOpen(false)}
-              className="px-4 py-2 rounded-xl text-slate-400 hover:text-white bg-slate-800 transition"
+              className="px-4 py-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs transition cursor-pointer"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={creating}
-              className="px-5 py-2 rounded-xl font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/20 transition disabled:opacity-50"
+              className="px-5 py-2.5 rounded-lg font-semibold text-xs bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-sm hover:shadow transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
             >
-              {creating ? 'Menerbitkan...' : 'Terbitkan Dokumen (DRAFT)'}
+              {creating ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>Menerbitkan...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Terbitkan Dokumen (DRAF)</span>
+                </>
+              )}
             </button>
           </div>
         </form>

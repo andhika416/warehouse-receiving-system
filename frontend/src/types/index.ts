@@ -83,3 +83,76 @@ export interface ReceivingDocumentDetail {
   updated_at: string;
   items: ReceivingItem[];
 }
+
+export interface StatusBreakdownItem {
+  key: string;
+  label: string;
+  count: number;
+  color: string;
+  description: string;
+}
+
+export interface TopStockProduct {
+  id?: string;
+  sku: string;
+  name: string;
+  unit: string;
+  quantity: number;
+}
+
+export interface DocumentProgressItem {
+  id: string;
+  doc_number: string;
+  status: DocumentStatus;
+  expected: number;
+  received: number;
+  percentage: number;
+}
+
+export interface ActiveDocumentQueueItem {
+  id: string;
+  doc_number: string;
+  status: DocumentStatus;
+  created_at: string;
+  supervisor_username: string;
+  total_items: number;
+  completed_items: number;
+  percentage: number;
+}
+
+export interface RecentTransactionItem {
+  id: string;
+  quantity: number;
+  type: string;
+  created_at: string;
+  sku: string;
+  product_name: string;
+  unit: string;
+  doc_number: string;
+  operator_username: string;
+}
+
+export interface DashboardStats {
+  summary: {
+    totalProducts: number;
+    totalPhysicalStock: number;
+    activeDocuments: number;
+    inProgressDocuments: number;
+    draftDocuments: number;
+    completedDocuments: number;
+    totalDocuments: number;
+    totalItems: number;
+    completedItems: number;
+    partialItems: number;
+    pendingItems: number;
+    fulfillmentRate: number;
+    totalTransactions: number;
+  };
+  documentBreakdown: StatusBreakdownItem[];
+  itemBreakdown: StatusBreakdownItem[];
+  topStockProducts: TopStockProduct[];
+  documentProgress: DocumentProgressItem[];
+  activeDocuments: ActiveDocumentQueueItem[];
+  recentTransactions: RecentTransactionItem[];
+}
+

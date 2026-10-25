@@ -4,9 +4,12 @@ import { X } from 'lucide-react';
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
-  title: string;
+  title: string | React.ReactNode;
   children: React.ReactNode;
-  maxWidth?: 'sm' | 'md' | 'lg' | 'xl';
+  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '4xl' | '5xl' | '6xl';
+  variant?: 'light' | 'dark';
+  zIndex?: string;
+  backdropClassName?: string;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -15,6 +18,9 @@ export const Modal: React.FC<ModalProps> = ({
   title,
   children,
   maxWidth = 'md',
+  variant = 'light',
+  zIndex = 'z-50',
+  backdropClassName = 'bg-black/20',
 }) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -31,26 +37,52 @@ export const Modal: React.FC<ModalProps> = ({
     md: 'max-w-lg',
     lg: 'max-w-2xl',
     xl: 'max-w-4xl',
-  }[maxWidth];
+    '2xl': 'max-w-5xl',
+    '4xl': 'max-w-4xl',
+    '5xl': 'max-w-5xl',
+    '6xl': 'max-w-6xl',
+  }[maxWidth] || 'max-w-lg';
+
+  const isLight = variant === 'light';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+    <div
+      onClick={onClose}
+      className={`fixed inset-0 ${zIndex} flex items-center justify-center p-3 sm:p-4 ${backdropClassName} animate-fade-in overflow-y-auto`}
+    >
       <div
-        className={`w-full ${maxWidthClass} rounded-2xl glass-panel bg-slate-900/95 border border-slate-800 shadow-2xl p-6 text-slate-100 overflow-hidden transform transition-all`}
+        className={`w-full ${maxWidthClass} max-h-[92vh] flex flex-col rounded-2xl shadow-2xl p-5 sm:p-6 overflow-hidden transform transition-all ${
+          isLight
+            ? 'bg-white border border-slate-200 text-slate-900'
+            : 'bg-slate-900 border border-slate-800 text-slate-100'
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between pb-4 border-b border-slate-800/80 mb-5">
-          <h3 className="text-lg font-semibold tracking-tight text-white flex items-center gap-2">
+        <div
+          className={`flex items-center justify-between pb-3 sm:pb-4 border-b mb-4 shrink-0 ${
+            isLight ? 'border-slate-100' : 'border-slate-800/80'
+          }`}
+        >
+          <div
+            className={`text-lg font-bold tracking-tight flex items-center gap-2 ${
+              isLight ? 'text-slate-900' : 'text-white'
+            }`}
+          >
             {title}
-          </h3>
+          </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+            className={`p-1.5 rounded-lg transition cursor-pointer ${
+              isLight
+                ? 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+            }`}
+            title="Tutup (Esc)"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div>{children}</div>
+        <div className="overflow-y-auto flex-1 pr-1">{children}</div>
       </div>
     </div>
   );

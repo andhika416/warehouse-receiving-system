@@ -96,4 +96,21 @@ router.put(
   }
 );
 
+// DELETE /api/products/:id (Supervisor only)
+router.delete(
+  '/:id',
+  requireRole('SUPERVISOR'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await ProductService.delete(req.params.id);
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 export default router;
