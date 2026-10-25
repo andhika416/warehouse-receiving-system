@@ -89,4 +89,32 @@ export class ProductService {
         ]);
         return updateRes.rows[0];
     }
+    static async delete(id) {
+        const client = await getClient();
+        try {
+            await client.query('BEGIN;');
+            const existing = await this.getById(id);
+            // Check if used in receiving items
+            const itemCheck = await client.query('SELECT id FROM receiving_items WHERE product_id = $1 LIMIT 1', [id]);
+            if (itemCheck.rowCount && itemCheck.rowCount > 0) {
+                throw new ConflictError(`Produk '${existing.sku}' tidak dapat dihapus karena tercatat dalam dokumen receiving.`);
+            }
+            // Check if inventory has positive stock
+            const invCheck = await client.query('SELECT quantity FROM inventories WHERE product_id = $1', [id]);
+            if (invCheck.rowCount && invCheck.rowCount > 0 && invCheck.rows[0].quantity > 0) {
+                throw new ConflictError(`Produk '${existing.sku}' tidak dapat dihapus karena masih memiliki stok fisik (${invCheck.rows[0].quantity} ${existing.unit}).`);
+            }
+            await client.query('DELETE FROM inventories WHERE product_id = $1', [id]);
+            await client.query('DELETE FROM products WHERE id = $1', [id]);
+            await client.query('COMMIT;');
+            return { id, sku: existing.sku };
+        }
+        catch (err) {
+            await client.query('ROLLBACK;');
+            throw err;
+        }
+        finally {
+            client.release();
+        }
+    }
 }

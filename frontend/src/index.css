@@ -89,3 +89,34 @@
     color: #0f172a !important;
   }
 }
+
+/* Laptop Camera Barcode Scanner Viewfinder */
+#barcode-camera-scanner-viewfinder video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 0.75rem !important;
+}
+
+#barcode-camera-scanner-viewfinder img {
+  display: none !important;
+}
+
+@keyframes laserScan {
+  0% {
+    top: 15%;
+    opacity: 0.3;
+  }
+  50% {
+    top: 85%;
+    opacity: 1;
+  }
+  100% {
+    top: 15%;
+    opacity: 0.3;
+  }
+}
+
+.animate-laser-scan {
+  animation: laserScan 2.2s ease-in-out infinite;
+}

@@ -4,6 +4,7 @@ import { ReceivingService } from '../services/receiving.service.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { DocumentStatus } from '../types/index.js';
+import { query } from '../config/db.js';
 
 const router = Router();
 
@@ -14,6 +15,7 @@ const createDocumentSchema = {
       z.object({
         product_id: z.string().uuid('Product ID must be a valid UUID'),
         expected_quantity: z.number().int().positive('Expected quantity must be > 0'),
+        received_quantity: z.number().int().min(0).optional(),
       })
     ).min(1, 'Document must contain at least 1 item'),
   }),
@@ -49,9 +51,10 @@ router.use(authenticate);
  */
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const status = req.query.status as DocumentStatus | undefined;
+    const rawStatus = req.query.status as string | undefined;
+    const status = (rawStatus && rawStatus !== 'ALL') ? (rawStatus as DocumentStatus) : undefined;
     const page = parseInt(req.query.page as string, 10) || 1;
-    const limit = parseInt(req.query.limit as string, 10) || 20;
+    const limit = parseInt(req.query.limit as string, 10) || 50;
 
     const result = await ReceivingService.listDocuments(status, page, limit);
     res.status(200).json({
@@ -66,11 +69,10 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
 /**
  * @route   POST /api/receivings
- * @desc    Buat dokumen receiving baru (Hanya Supervisor)
+ * @desc    Buat dokumen receiving baru (Supervisor atau Operator Catat Masuk)
  */
 router.post(
   '/',
-  requireRole('SUPERVISOR'),
   validate(createDocumentSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -78,11 +80,21 @@ router.post(
       const formattedItems = items.map((i: any) => ({
         productId: i.product_id,
         expectedQuantity: i.expected_quantity,
+        receivedQuantity: i.received_quantity,
       }));
+
+      let supervisorId = req.user!.id;
+      if (req.user!.role === 'OPERATOR') {
+        const supRes = await query("SELECT id FROM users WHERE role = 'SUPERVISOR' LIMIT 1");
+        if (supRes.rowCount && supRes.rowCount > 0) {
+          supervisorId = supRes.rows[0].id;
+        }
+      }
 
       const document = await ReceivingService.createDocument(
         doc_number,
         formattedItems,
+        supervisorId,
         req.user!.id
       );
 

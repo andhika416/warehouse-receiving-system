@@ -134,47 +134,47 @@ export class DashboardService {
       documentBreakdown: [
         {
           key: 'COMPLETED',
-          label: 'Selesai (Completed)',
+          label: 'Selesai',
           count: docCounts.COMPLETED || 0,
           color: '#10b981', // emerald-500
-          description: 'Penerimaan barang telah tuntas diverifikasi 100%',
+          description: '',
         },
         {
           key: 'IN_PROGRESS',
-          label: 'Sedang Diproses (In Progress)',
+          label: 'Diproses',
           count: docCounts.IN_PROGRESS || 0,
           color: '#3b82f6', // blue-500
-          description: 'Barang sedang diperiksa dan dihitung fisik di dermaga gudang',
+          description: '',
         },
         {
           key: 'DRAFT',
-          label: 'Draft Menunggu',
+          label: 'Draft',
           count: docCounts.DRAFT || 0,
           color: '#f59e0b', // amber-500
-          description: 'Dokumen dibuat supervisor, belum dimulai perhitungan fisik',
+          description: '',
         },
       ],
       itemBreakdown: [
         {
           key: 'COMPLETED',
-          label: 'Diterima Penuh (100%)',
+          label: 'Diterima Penuh',
           count: itemCounts.COMPLETED || 0,
           color: '#10b981',
-          description: 'Kuantitas fisik cocok dengan dokumen kirim',
+          description: '',
         },
         {
           key: 'PARTIAL',
-          label: 'Diterima Sebagian',
+          label: 'Sebagian',
           count: itemCounts.PARTIAL || 0,
           color: '#3b82f6',
-          description: 'Sebagian kuantitas fisik telah masuk, menunggu sisa barang',
+          description: '',
         },
         {
           key: 'PENDING',
           label: 'Belum Diterima',
           count: itemCounts.PENDING || 0,
           color: '#ef4444',
-          description: 'Belum ada penghitungan fisik yang dicatat untuk item ini',
+          description: '',
         },
       ],
       topStockProducts: topStockRes.rows.map((r: any) => ({

@@ -104,56 +104,54 @@ const MainLayout: React.FC = () => {
           }
         />
 
-        <main className="flex-1 min-h-0 overflow-y-auto p-6 lg:p-8 bg-slate-50 text-slate-900 font-sans">
-          <div className="max-w-7xl mx-auto">
-            {activeTab === 'dashboard' && (
-              <DashboardPage
-                onNavigate={(tab, docId) => {
-                  setActiveTab(tab);
-                  if (docId) {
-                    setSelectedDocId(docId);
-                  } else {
-                    setSelectedDocId(null);
-                  }
-                }}
-                onOpenCreateModal={
-                  role === 'SUPERVISOR'
-                    ? () => {
-                        setActiveTab('receivings');
-                        setSelectedDocId(null);
-                        setIsCreateModalOpen(true);
-                      }
-                    : undefined
-                }
-                onNotify={(type, msg) => addToast(type, msg)}
-              />
-            )}
-
-            {activeTab === 'receivings' && (
-              <ReceivingsPage
-                selectedDocId={selectedDocId}
-                onClearSelectedDocId={() => {
+        <main className="flex-1 min-h-0 overflow-y-auto bg-slate-50 text-slate-900 font-sans">
+          {activeTab === 'dashboard' && (
+            <DashboardPage
+              onNavigate={(tab, docId) => {
+                setActiveTab(tab);
+                if (docId) {
+                  setSelectedDocId(docId);
+                } else {
                   setSelectedDocId(null);
-                  refreshNotifications();
-                }}
-                isCreateModalOpen={isCreateModalOpen}
-                setIsCreateModalOpen={setIsCreateModalOpen}
-                onNotify={(type, msg) => addToast(type, msg)}
-              />
-            )}
+                }
+              }}
+              onOpenCreateModal={
+                role === 'SUPERVISOR'
+                  ? () => {
+                      setActiveTab('receivings');
+                      setSelectedDocId(null);
+                      setIsCreateModalOpen(true);
+                    }
+                  : undefined
+              }
+              onNotify={(type, msg) => addToast(type, msg)}
+            />
+          )}
 
-            {activeTab === 'products' && (
-              <ProductsPage onNotify={(type, msg) => addToast(type, msg)} />
-            )}
+          {activeTab === 'receivings' && (
+            <ReceivingsPage
+              selectedDocId={selectedDocId}
+              onClearSelectedDocId={() => {
+                setSelectedDocId(null);
+                refreshNotifications();
+              }}
+              isCreateModalOpen={isCreateModalOpen}
+              setIsCreateModalOpen={setIsCreateModalOpen}
+              onNotify={(type, msg) => addToast(type, msg)}
+            />
+          )}
 
-            {activeTab === 'inventory' && (
-              <InventoryPage onNotify={(type, msg) => addToast(type, msg)} />
-            )}
+          {activeTab === 'products' && (
+            <ProductsPage onNotify={(type, msg) => addToast(type, msg)} />
+          )}
 
-            {activeTab === 'transactions' && role === 'SUPERVISOR' && (
-              <TransactionsPage onNotify={(type, msg) => addToast(type, msg)} />
-            )}
-          </div>
+          {activeTab === 'inventory' && (
+            <InventoryPage onNotify={(type, msg) => addToast(type, msg)} />
+          )}
+
+          {activeTab === 'transactions' && role === 'SUPERVISOR' && (
+            <TransactionsPage onNotify={(type, msg) => addToast(type, msg)} />
+          )}
         </main>
       </div>
 

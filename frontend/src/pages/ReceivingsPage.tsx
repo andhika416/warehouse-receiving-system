@@ -7,6 +7,8 @@ import { Pagination } from '../components/Pagination.js';
 import { useAuth } from '../context/AuthContext.js';
 import { ReceivingDetailPage } from './ReceivingDetailPage.js';
 import { printGoodsReceipt } from '../utils/printReceipt.js';
+import { exportToExcel, printToPDF, exportToCSV, type ExportColumn } from '../utils/exportUtils.js';
+import { ExportButtonGroup } from '../components/common/ExportButtonGroup.js';
 import {
   Truck,
   Plus,
@@ -21,6 +23,10 @@ import {
   PackageOpen,
   Eye,
   Printer,
+  Filter,
+  ArrowUpDown,
+  FileSpreadsheet,
+  Download,
 } from 'lucide-react';
 
 interface ReceivingsPageProps {
@@ -38,7 +44,7 @@ export const ReceivingsPage: React.FC<ReceivingsPageProps> = ({
   setIsCreateModalOpen,
   onNotify,
 }) => {
-  const { role } = useAuth();
+  const { user, role } = useAuth();
   const isSupervisor = role === 'SUPERVISOR';
 
   const [documents, setDocuments] = useState<ReceivingDocumentSummary[]>([]);
@@ -68,6 +74,92 @@ export const ReceivingsPage: React.FC<ReceivingsPageProps> = ({
     } finally {
       setLoadingPrintSlip(false);
     }
+  };
+
+  const slipExportColumns: ExportColumn[] = [
+    { header: 'No', key: '_index', width: 40, align: 'center' },
+    { header: 'SKU Produk', key: 'sku', width: 120 },
+    { header: 'Nama Produk', key: 'product_name', width: 220 },
+    { header: 'Satuan', key: 'unit', width: 70, align: 'center' },
+    {
+      header: 'Target Qty',
+      key: 'expected_quantity',
+      width: 90,
+      align: 'right',
+      format: (val) => Number(val || 0),
+    },
+    {
+      header: 'Diterima Fisik',
+      key: 'received_quantity',
+      width: 90,
+      align: 'right',
+      format: (val) => Number(val || 0),
+    },
+    {
+      header: 'Sisa Belum Diterima',
+      key: 'remaining_quantity',
+      width: 90,
+      align: 'right',
+      format: (val) => Number(val || 0),
+    },
+    {
+      header: 'Status Item',
+      key: 'status',
+      width: 110,
+      align: 'center',
+      format: (val) =>
+        val === 'COMPLETED' ? 'Selesai' : val === 'PARTIAL' ? 'Sebagian' : 'Belum Diterima',
+    },
+  ];
+
+  const handleExportSlipExcel = () => {
+    if (!printSlipDoc) return;
+    exportToExcel({
+      title: `Surat Bukti Penerimaan Barang - ${printSlipDoc.doc_number}`,
+      subtitle: `Supervisor: ${printSlipDoc.supervisor_username} | Tanggal: ${new Date(
+        printSlipDoc.created_at
+      ).toLocaleDateString('id-ID')}`,
+      filename: `bukti_penerimaan_${printSlipDoc.doc_number}`,
+      columns: slipExportColumns,
+      data: printSlipDoc.items,
+      summaryItems: [
+        { label: 'Total Item SKU', value: printSlipDoc.items.length },
+        {
+          label: 'Total Target',
+          value: `${printSlipDoc.items.reduce(
+            (s, it) => s + (it.expected_quantity || 0),
+            0
+          )} unit`,
+        },
+        {
+          label: 'Total Diterima Fisik',
+          value: `${printSlipDoc.items.reduce(
+            (s, it) => s + (it.received_quantity || 0),
+            0
+          )} unit`,
+        },
+        { label: 'Status Dokumen', value: 'SELESAI (100% LENGKAP)' },
+      ],
+      printedBy: { name: user?.username, role: role || 'Pengguna' },
+    });
+    onNotify(
+      'success',
+      `Bukti penerimaan ${printSlipDoc.doc_number} berhasil diekspor ke Excel (.xls)!`
+    );
+  };
+
+  const handleExportSlipCSV = () => {
+    if (!printSlipDoc) return;
+    exportToCSV({
+      title: `Surat Bukti Penerimaan Barang - ${printSlipDoc.doc_number}`,
+      filename: `bukti_penerimaan_${printSlipDoc.doc_number}`,
+      columns: slipExportColumns,
+      data: printSlipDoc.items,
+    });
+    onNotify(
+      'success',
+      `Bukti penerimaan ${printSlipDoc.doc_number} berhasil diekspor ke format CSV!`
+    );
   };
 
   // Sync external selection (e.g. from notification click)
@@ -213,44 +305,141 @@ export const ReceivingsPage: React.FC<ReceivingsPageProps> = ({
   const inProgressCount = documents.filter((d) => d.status === 'IN_PROGRESS').length;
   const completedCount = documents.filter((d) => d.status === 'COMPLETED').length;
 
+  const exportColumns: ExportColumn[] = [
+    { header: 'No', key: '_index', width: 40, align: 'center' },
+    { header: 'No. Dokumen', key: 'doc_number', width: 140 },
+    {
+      header: 'Status',
+      key: 'status',
+      width: 100,
+      align: 'center',
+      format: (val) =>
+        val === 'COMPLETED' ? 'Selesai' : val === 'IN_PROGRESS' ? 'Sedang Berjalan' : 'Draft',
+    },
+    {
+      header: 'Total Item SKU',
+      key: 'total_items',
+      width: 90,
+      align: 'right',
+      format: (val) => Number(val || 0),
+    },
+    {
+      header: 'Item Selesai',
+      key: 'completed_items',
+      width: 90,
+      align: 'right',
+      format: (val) => Number(val || 0),
+    },
+    {
+      header: 'Progres (%)',
+      key: 'percentage',
+      width: 80,
+      align: 'center',
+      format: (_, doc) => {
+        const total = Number(doc.total_items || 0);
+        const comp = Number(doc.completed_items || 0);
+        return total > 0 ? `${Math.round((comp / total) * 100)}%` : '0%';
+      },
+    },
+    { header: 'Supervisor Penerbit', key: 'supervisor_username', width: 130 },
+    {
+      header: 'Tanggal Dibuat',
+      key: 'created_at',
+      width: 140,
+      align: 'center',
+      format: (val) => (val ? new Date(val).toLocaleString('id-ID') : '-'),
+    },
+  ];
+
+  const getExportOptions = () => ({
+    title: 'Daftar Dokumen Penerimaan Barang (Receiving)',
+    subtitle:
+      filterStatus !== 'ALL'
+        ? `Status: ${filterStatus}`
+        : search
+        ? `Pencarian: "${search}"`
+        : 'Seluruh Manifes Dokumen Receiving',
+    filename: `logiflow_dokumen_receiving_${new Date().toISOString().split('T')[0]}`,
+    columns: exportColumns,
+    data: filteredDocuments,
+    summaryItems: [
+      { label: 'Total Dokumen', value: filteredDocuments.length },
+      { label: 'Selesai', value: filteredDocuments.filter((d) => d.status === 'COMPLETED').length },
+      { label: 'Sedang Berjalan', value: filteredDocuments.filter((d) => d.status === 'IN_PROGRESS').length },
+      { label: 'Draft', value: filteredDocuments.filter((d) => d.status === 'DRAFT').length },
+    ],
+    printedBy: { name: user?.username, role: role || 'Pengguna' },
+  });
+
+  const handleExportPDF = () => {
+    if (filteredDocuments.length === 0) {
+      onNotify('warning', 'Tidak ada data dokumen receiving untuk dicetak.');
+      return;
+    }
+    printToPDF(getExportOptions());
+    onNotify('success', 'Jendela cetak PDF daftar dokumen receiving berhasil disiapkan!');
+  };
+
+  const handleExportExcel = () => {
+    if (filteredDocuments.length === 0) {
+      onNotify('warning', 'Tidak ada data dokumen receiving untuk diekspor.');
+      return;
+    }
+    exportToExcel(getExportOptions());
+    onNotify('success', `${filteredDocuments.length} dokumen receiving berhasil diekspor ke Excel (.xls)!`);
+  };
+
+  const handleExportCSV = () => {
+    if (filteredDocuments.length === 0) {
+      onNotify('warning', 'Tidak ada data dokumen receiving untuk diekspor.');
+      return;
+    }
+    exportToCSV(getExportOptions());
+    onNotify('success', `${filteredDocuments.length} dokumen receiving berhasil diekspor ke format CSV!`);
+  };
+
   return (
-    <div className="space-y-6 font-sans text-slate-900 pb-12">
-      {/* 1. Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700">
-              <Truck className="w-5 h-5" />
-            </div>
-            <span>Dokumen Penerimaan Barang (Receiving)</span>
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Manifes penerimaan fisik barang masuk dari vendor dan pemasok
-          </p>
-        </div>
+    <div className="font-sans text-slate-900">
+      {/* 1. Fixed / Sticky Page Header Bar (Flush with Navbar) */}
+      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md border-b border-slate-200/80 px-6 lg:px-8 py-3.5 mb-6 shadow-2xs">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
+                <Truck className="w-5 h-5" />
+              </div>
+              <span>Dokumen Penerimaan Barang (Receiving)</span>
+            </h1>
+            <p className="text-sm text-slate-500 mt-1">
+              Manifes penerimaan fisik barang masuk dari vendor dan pemasok
+            </p>
+          </div>
 
-        <div className="flex items-center gap-2.5">
-          <button
-            onClick={fetchDocuments}
-            title="Muat Ulang Dokumen"
-            className="p-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition shadow-sm cursor-pointer"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-600' : ''}`} />
-          </button>
-
-          {isSupervisor && (
+          <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
             <button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-sm hover:shadow transition transform active:scale-[0.99] cursor-pointer"
+              onClick={fetchDocuments}
+              title="Muat Ulang Dokumen"
+              className="p-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition shadow-sm cursor-pointer"
             >
-              <Plus className="w-4 h-4" />
-              <span>+ Buat Dokumen Baru</span>
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-600' : ''}`} />
             </button>
-          )}
+
+            {isSupervisor && (
+              <button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-sm hover:shadow transition transform active:scale-[0.99] cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>+ Buat Dokumen Baru</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* 2. KPI Cards */}
+      {/* 2. Main Body Content */}
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 pb-12 space-y-6">
+        {/* 2. KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center justify-between">
           <div>
@@ -310,26 +499,31 @@ export const ReceivingsPage: React.FC<ReceivingsPageProps> = ({
           )}
         </div>
 
-        {/* Right: Status filter buttons */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {[
-            { id: 'ALL', label: 'Semua Status' },
-            { id: 'DRAFT', label: 'Draf' },
-            { id: 'IN_PROGRESS', label: 'Sedang Berjalan' },
-            { id: 'COMPLETED', label: 'Selesai' },
-          ].map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setFilterStatus(item.id)}
-              className={`px-3 py-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                filterStatus === item.id
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'bg-slate-50 text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
-              }`}
+        {/* Right side: Status Dropdown Filter and Export Action Buttons */}
+        <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
+          <div className="relative min-w-[170px]">
+            <Filter className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3 pointer-events-none" />
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="w-full pl-8 pr-8 py-2 bg-white border border-slate-200 rounded-lg text-xs sm:text-sm text-slate-700 font-medium focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition cursor-pointer appearance-none shadow-sm"
             >
-              {item.label}
-            </button>
-          ))}
+              <option value="ALL">Semua Status</option>
+              <option value="DRAFT">Draf</option>
+              <option value="IN_PROGRESS">Sedang Berjalan</option>
+              <option value="COMPLETED">Selesai</option>
+            </select>
+            <div className="absolute right-2.5 top-3 pointer-events-none text-slate-400">
+              <ArrowUpDown className="w-3.5 h-3.5" />
+            </div>
+          </div>
+
+          <ExportButtonGroup
+            onExportPDF={handleExportPDF}
+            onExportExcel={handleExportExcel}
+            onExportCSV={handleExportCSV}
+            disabled={loading || filteredDocuments.length === 0}
+          />
         </div>
       </div>
 
@@ -433,19 +627,28 @@ export const ReceivingsPage: React.FC<ReceivingsPageProps> = ({
                       </td>
                       <td className="py-4 px-5 align-middle text-center">
                         <div className="flex items-center justify-center gap-1.5">
-                          {/* Cetak Bukti Penerimaan (Hanya muncul jika sudah konfirmasi / COMPLETED) */}
-                          {doc.status === 'COMPLETED' && (
+                          {/* Cetak Bukti Penerimaan (Hanya aktif jika sudah di-ACC / COMPLETED) */}
+                          {doc.status === 'COMPLETED' ? (
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleOpenPrintSlip(doc.id);
                               }}
-                              title="Cetak Bukti Penerimaan Barang (Dokumen Selesai)"
-                              className="p-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300 transition shadow-sm cursor-pointer"
+                              title="Cetak Bukti Penerimaan Barang (Dokumen Telah di-ACC Supervisor)"
+                              className="px-2.5 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300 transition shadow-sm cursor-pointer flex items-center gap-1 text-xs font-semibold"
                             >
-                              <Printer className="w-4 h-4" />
+                              <Printer className="w-3.5 h-3.5" />
+                              <span>Cetak Bukti</span>
                             </button>
+                          ) : (
+                            <span
+                              title="Menunggu pemeriksaan & ACC dari Supervisor. Bukti penerimaan hanya dapat dicetak setelah di-ACC."
+                              className="px-2 py-1 rounded-md text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1 cursor-not-allowed"
+                            >
+                              <Clock className="w-3 h-3 text-amber-500" />
+                              <span>Menunggu ACC</span>
+                            </span>
                           )}
 
                           {/* Buka Detail (Icon Mata Saja) */}
@@ -606,32 +809,57 @@ export const ReceivingsPage: React.FC<ReceivingsPageProps> = ({
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex items-center justify-end gap-3 pt-3">
+            {/* Action Buttons: Cetak PDF, Excel, CSV, Tutup */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-200">
               <button
                 type="button"
                 onClick={() => {
                   setIsPrintSlipOpen(false);
                   setPrintSlipDoc(null);
                 }}
-                className="px-4 py-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs transition cursor-pointer"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs transition cursor-pointer"
               >
                 Tutup
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (printSlipDoc) {
-                    printGoodsReceipt(printSlipDoc);
-                  } else {
-                    window.print();
-                  }
-                }}
-                className="px-5 py-2.5 rounded-lg font-semibold text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition cursor-pointer flex items-center gap-1.5"
-              >
-                <Printer className="w-4 h-4" />
-                <span>Cetak Sekarang (Print)</span>
-              </button>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
+                {/* 1. Cetak PDF */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (printSlipDoc) {
+                      printGoodsReceipt(printSlipDoc);
+                    }
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 shadow-2xs transition active:scale-95 cursor-pointer flex items-center gap-1.5"
+                  title="Cetak Bukti Penerimaan / Simpan sebagai PDF"
+                >
+                  <Printer className="w-3.5 h-3.5 text-rose-600" />
+                  <span>Cetak PDF</span>
+                </button>
+
+                {/* 2. Unduh Excel */}
+                <button
+                  type="button"
+                  onClick={handleExportSlipExcel}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-2xs transition active:scale-95 cursor-pointer flex items-center gap-1.5"
+                  title="Unduh Bukti Penerimaan Format Excel (.xls)"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Excel</span>
+                </button>
+
+                {/* 3. Unduh CSV */}
+                <button
+                  type="button"
+                  onClick={handleExportSlipCSV}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 shadow-2xs transition active:scale-95 cursor-pointer flex items-center gap-1.5"
+                  title="Unduh Data Mentah Format CSV"
+                >
+                  <Download className="w-3.5 h-3.5 text-slate-600" />
+                  <span>CSV</span>
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -754,6 +982,7 @@ export const ReceivingsPage: React.FC<ReceivingsPageProps> = ({
           </div>
         </form>
       </Modal>
+      </div>
     </div>
   );
 };

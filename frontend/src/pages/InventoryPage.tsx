@@ -3,6 +3,9 @@ import { api } from '../api/client.js';
 import type { InventoryItem } from '../types/index.js';
 import { Modal } from '../components/Modal.js';
 import { Pagination } from '../components/Pagination.js';
+import { useAuth } from '../context/AuthContext.js';
+import { exportToExcel, printToPDF, exportToCSV, type ExportColumn } from '../utils/exportUtils.js';
+import { ExportButtonGroup } from '../components/common/ExportButtonGroup.js';
 import {
   Search,
   Layers,
@@ -10,7 +13,6 @@ import {
   Package,
   ArrowUpRight,
   CheckCircle2,
-  FileSpreadsheet,
   X,
   PackageOpen,
   ShieldCheck,
@@ -77,72 +79,126 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ onNotify }) => {
   const inStockSKUs = inventories.filter((i) => i.quantity > 0).length;
   const totalQuantity = inventories.reduce((sum, item) => sum + (item.quantity || 0), 0);
 
-  // Export CSV
+  const { user, role } = useAuth();
+
+  const exportColumns: ExportColumn[] = [
+    { header: 'No', key: '_index', width: 40, align: 'center' },
+    { header: 'SKU Produk', key: 'sku', width: 120 },
+    { header: 'Nama Produk', key: 'product_name', width: 240 },
+    { header: 'Satuan', key: 'unit', width: 70, align: 'center' },
+    {
+      header: 'Saldo Fisik',
+      key: 'quantity',
+      width: 90,
+      align: 'right',
+      format: (val) => Number(val || 0),
+    },
+    {
+      header: 'Status Stok',
+      key: 'status',
+      width: 100,
+      align: 'center',
+      format: (_, row) => (row.quantity > 0 ? 'Tersedia' : 'Kosong'),
+    },
+    {
+      header: 'Pembaruan Terakhir',
+      key: 'updated_at',
+      width: 150,
+      align: 'center',
+      format: (val) => (val ? new Date(val).toLocaleString('id-ID') : '-'),
+    },
+  ];
+
+  const getExportOptions = () => ({
+    title: 'Laporan Saldo Inventaris Gudang',
+    subtitle:
+      stockFilter === 'IN_STOCK'
+        ? 'Filter: Hanya Stok Tersedia'
+        : stockFilter === 'ZERO_STOCK'
+        ? 'Filter: Hanya Stok Habis'
+        : 'Semua Saldo Fisik On-Hand',
+    filename: `logiflow_saldo_inventaris_${new Date().toISOString().split('T')[0]}`,
+    columns: exportColumns,
+    data: filteredInventory,
+    summaryItems: [
+      { label: 'Total SKU', value: filteredInventory.length },
+      {
+        label: 'Total Saldo Fisik',
+        value: `${filteredInventory
+          .reduce((sum, item) => sum + (item.quantity || 0), 0)
+          .toLocaleString('id-ID')} unit`,
+      },
+    ],
+    printedBy: { name: user?.username, role: role || 'Pengguna' },
+  });
+
+  const handleExportPDF = () => {
+    if (filteredInventory.length === 0) {
+      onNotify('warning', 'Tidak ada data saldo inventaris untuk dicetak.');
+      return;
+    }
+    printToPDF(getExportOptions());
+    onNotify('success', 'Jendela cetak PDF saldo inventaris berhasil disiapkan!');
+  };
+
+  const handleExportExcel = () => {
+    if (filteredInventory.length === 0) {
+      onNotify('warning', 'Tidak ada data saldo inventaris untuk diekspor.');
+      return;
+    }
+    exportToExcel(getExportOptions());
+    onNotify('success', `${filteredInventory.length} data inventaris berhasil diekspor ke Excel (.xls)!`);
+  };
+
   const handleExportCSV = () => {
     if (filteredInventory.length === 0) {
       onNotify('warning', 'Tidak ada data saldo inventaris untuk diekspor.');
       return;
     }
-
-    const headers = ['SKU Produk', 'Nama Produk', 'Satuan', 'Saldo On-Hand', 'Pembaruan Terakhir'];
-    const rows = filteredInventory.map((i) => [
-      `"${i.sku}"`,
-      `"${i.product_name.replace(/"/g, '""')}"`,
-      `"${i.unit}"`,
-      i.quantity,
-      `"${i.updated_at ? new Date(i.updated_at).toLocaleString('id-ID') : '-'}"`,
-    ]);
-
-    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `logiflow_saldo_inventaris_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
+    exportToCSV(getExportOptions());
     onNotify('success', `${filteredInventory.length} data inventaris berhasil diekspor ke format CSV!`);
   };
 
+
   return (
-    <div className="space-y-6 font-sans text-slate-900 pb-12">
-      {/* 1. Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700">
-              <Layers className="w-5 h-5" />
-            </div>
-            <span>Saldo Inventaris Gudang</span>
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Informasi saldo fisik barang on-hand yang telah diverifikasi secara ACID di basis data
-          </p>
-        </div>
+    <div className="font-sans text-slate-900">
+      {/* 1. Fixed / Sticky Page Header Bar (Flush with Navbar) */}
+      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md border-b border-slate-200/80 px-6 lg:px-8 py-3.5 mb-6 shadow-2xs">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
+                <Layers className="w-5 h-5" />
+              </div>
+              <span>Saldo Inventaris Gudang</span>
+            </h1>
+            <p className="text-sm text-slate-500 mt-1">
+              Informasi saldo fisik barang on-hand yang telah diverifikasi secara ACID di basis data
+            </p>
+          </div>
 
-        <div className="flex items-center gap-2.5">
-          <button
-            onClick={fetchInventory}
-            title="Muat Ulang Saldo Inventaris"
-            className="p-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition shadow-sm cursor-pointer"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-600' : ''}`} />
-          </button>
+          <div className="flex items-center gap-2.5 shrink-0">
+            <button
+              onClick={fetchInventory}
+              title="Muat Ulang Saldo Inventaris"
+              className="p-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition shadow-sm cursor-pointer"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-600' : ''}`} />
+            </button>
 
-          <button
-            type="button"
-            onClick={handleExportCSV}
-            className="flex items-center gap-2 px-3.5 py-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs sm:text-sm shadow-sm transition cursor-pointer"
-          >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-            <span>Ekspor CSV</span>
-          </button>
+            <ExportButtonGroup
+              onExportPDF={handleExportPDF}
+              onExportExcel={handleExportExcel}
+              onExportCSV={handleExportCSV}
+              disabled={loading || filteredInventory.length === 0}
+            />
+          </div>
         </div>
       </div>
 
-      {/* 2. KPI Cards */}
+      {/* 2. Main Body Content */}
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 pb-12 space-y-6">
+        {/* 2. KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center justify-between">
           <div>
@@ -464,6 +520,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ onNotify }) => {
           </div>
         )}
       </Modal>
+      </div>
     </div>
   );
 };

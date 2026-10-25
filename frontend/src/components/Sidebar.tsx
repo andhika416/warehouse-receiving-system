@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.js';
+import { api } from '../api/client.js';
 import {
   LayoutDashboard,
   Boxes,
@@ -7,10 +8,9 @@ import {
   History,
   PlusCircle,
   Truck,
-  CheckSquare,
   ChevronLeft,
   ChevronRight,
-  ShieldCheck,
+  Database,
 } from 'lucide-react';
 
 export type NavTab = 'dashboard' | 'receivings' | 'products' | 'inventory' | 'transactions';
@@ -33,35 +33,43 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const { role } = useAuth();
   const isSupervisor = role === 'SUPERVISOR';
 
+  const [dbHealthy, setDbHealthy] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    api
+      .get('/health')
+      .then((res) => {
+        setDbHealthy(res.data.database?.status === 'CONNECTED');
+      })
+      .catch(() => {
+        setDbHealthy(false);
+      });
+  }, []);
+
   const navItems = [
     {
       id: 'dashboard' as NavTab,
       label: 'Dashboard',
-      description: 'Ringkasan & analitik operasional',
       icon: <LayoutDashboard className="w-5 h-5" />,
     },
     {
       id: 'receivings' as NavTab,
       label: 'Dokumen Receiving',
-      description: 'Verifikasi fisik barang masuk',
       icon: <Truck className="w-5 h-5" />,
     },
     {
       id: 'products' as NavTab,
       label: 'Master Produk',
-      description: 'Katalog SKU & satuan unit',
       icon: <Boxes className="w-5 h-5" />,
     },
     {
       id: 'inventory' as NavTab,
       label: 'Saldo Inventaris',
-      description: 'Stok fisik saat ini',
       icon: <Layers className="w-5 h-5" />,
     },
     {
       id: 'transactions' as NavTab,
       label: 'Log Mutasi Stok',
-      description: 'Jejak audit kartu stok',
       icon: <History className="w-5 h-5" />,
       supervisorOnly: true,
     },
@@ -151,7 +159,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   key={item.id}
                   type="button"
                   onClick={() => onTabChange(item.id)}
-                  title={`${item.label} - ${item.description}`}
+                  title={item.label}
                   className={`w-12 h-12 mx-auto flex items-center justify-center rounded-xl transition-all duration-150 group relative cursor-pointer ${
                     isActive
                       ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30 font-bold'
@@ -163,28 +171,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </div>
 
                   {/* Floating Tooltip in collapsed mode */}
-                  <div className="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 text-slate-100 text-xs font-medium rounded-lg shadow-xl border border-slate-700 whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
-                    <div className="font-bold text-white">{item.label}</div>
-                    <div className="text-[10px] text-slate-400 font-normal">{item.description}</div>
+                  <div className="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 text-slate-100 text-xs font-semibold rounded-lg shadow-xl border border-slate-700 whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+                    {item.label}
                   </div>
                 </button>
               );
             }
 
-            // Expanded mode: full button with icon + label + description
+            // Expanded mode: full button with icon + label
             return (
               <button
                 key={item.id}
                 type="button"
                 onClick={() => onTabChange(item.id)}
-                className={`w-full flex items-start gap-3 p-2.5 rounded-xl text-left transition-all duration-150 cursor-pointer ${
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-150 cursor-pointer ${
                   isActive
                     ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25 font-semibold'
                     : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900 border border-transparent'
                 }`}
               >
                 <div
-                  className={`p-2 rounded-lg mt-0.5 transition ${
+                  className={`p-1.5 rounded-lg transition ${
                     isActive
                       ? 'bg-emerald-700/60 text-white shadow-inner'
                       : 'bg-slate-900 text-slate-400'
@@ -192,86 +199,64 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 >
                   {item.icon}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div
-                    className={`text-sm truncate ${
-                      isActive ? 'text-white font-bold' : 'text-slate-200 font-medium'
-                    }`}
-                  >
-                    {item.label}
-                  </div>
-                  <div
-                    className={`text-[11px] leading-tight mt-0.5 truncate ${
-                      isActive ? 'text-emerald-100/90' : 'text-slate-400'
-                    }`}
-                  >
-                    {item.description}
-                  </div>
-                </div>
+                <span
+                  className={`text-sm truncate ${
+                    isActive ? 'text-white font-semibold' : 'text-slate-300 font-medium'
+                  }`}
+                >
+                  {item.label}
+                </span>
               </button>
             );
           })}
         </nav>
       </div>
 
-      {/* Footer Section */}
-      <div className="space-y-3 pt-4 border-t border-slate-900">
+      {/* Footer Section: Database Health Indicator */}
+      <div className="pt-3 border-t border-slate-900">
         {!isCollapsed ? (
-          <>
-            {/* Role Notice Card */}
-            <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-400 space-y-1">
-              <div className="font-medium text-slate-300 flex items-center gap-1.5">
-                <CheckSquare className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Aturan Bisnis Aktif</span>
-              </div>
-              <p className="text-[11px] text-slate-500 leading-relaxed">
-                {isSupervisor
-                  ? 'Supervisor: penerbitan dokumen, master produk, dan verifikasi akhir.'
-                  : 'Operator: pencatatan fisik barang masuk dengan proteksi over-receiving.'}
-              </p>
+          <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-slate-900/80 border border-slate-800/80 text-xs">
+            <Database className="w-4 h-4 text-slate-400 shrink-0" />
+            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+              <span className="text-slate-400 text-xs">Database:</span>
+              <span className="font-medium text-slate-200 text-xs truncate">
+                {dbHealthy === true ? 'Terhubung' : dbHealthy === false ? 'Terputus' : 'Memeriksa'}
+              </span>
             </div>
-
-            {/* Bottom Collapse Button */}
-            {onToggleCollapse && (
-              <button
-                type="button"
-                onClick={onToggleCollapse}
-                className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-medium text-slate-400 hover:text-slate-100 hover:bg-slate-900 border border-slate-800/80 transition cursor-pointer"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                <span>Kecilkan Menu</span>
-              </button>
-            )}
-          </>
+            <span
+              className={`w-2 h-2 rounded-full shrink-0 ${
+                dbHealthy === true
+                  ? 'bg-emerald-400 shadow-sm shadow-emerald-400'
+                  : dbHealthy === false
+                  ? 'bg-rose-400 shadow-sm shadow-rose-400'
+                  : 'bg-amber-400 animate-ping'
+              }`}
+            />
+          </div>
         ) : (
-          <>
-            {/* Collapsed badge icon with hover tooltip */}
-            <div
-              title={
-                isSupervisor
-                  ? 'Role: Supervisor (Hak Akses Penuh)'
-                  : 'Role: Operator (Pencatatan Fisik Masuk)'
-              }
-              className="w-12 h-10 mx-auto rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-emerald-400 cursor-help group relative"
-            >
-              <ShieldCheck className="w-5 h-5 text-emerald-400" />
-              <div className="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 text-slate-100 text-xs font-semibold rounded-lg shadow-xl border border-slate-700 whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
-                {isSupervisor ? 'Supervisor WMS' : 'Operator Gudang'}
-              </div>
+          <div
+            title={`Database: ${
+              dbHealthy === true ? 'Terhubung' : dbHealthy === false ? 'Terputus' : 'Memeriksa'
+            }`}
+            className="w-10 h-10 mx-auto rounded-xl bg-slate-900/80 border border-slate-800/80 flex items-center justify-center group relative cursor-help"
+          >
+            <div className="relative">
+              <Database className="w-4 h-4 text-slate-400" />
+              <span
+                className={`absolute -top-1 -right-1 w-2 h-2 rounded-full ${
+                  dbHealthy === true
+                    ? 'bg-emerald-400 shadow-sm shadow-emerald-400'
+                    : dbHealthy === false
+                    ? 'bg-rose-400 shadow-sm shadow-rose-400'
+                    : 'bg-amber-400 animate-ping'
+                }`}
+              />
             </div>
-
-            {/* Bottom Expand Button */}
-            {onToggleCollapse && (
-              <button
-                type="button"
-                onClick={onToggleCollapse}
-                title="Buka Sidebar Penuh"
-                className="w-12 h-10 mx-auto flex items-center justify-center rounded-xl text-slate-400 hover:text-white hover:bg-slate-900 border border-slate-800/80 transition cursor-pointer"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            )}
-          </>
+            {/* Tooltip for collapsed mode */}
+            <div className="absolute left-full ml-3 px-2.5 py-1.5 bg-slate-900 text-slate-100 text-xs font-semibold rounded-lg shadow-xl border border-slate-700 whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+              Database: {dbHealthy === true ? 'Terhubung' : dbHealthy === false ? 'Terputus' : 'Memeriksa'}
+            </div>
+          </div>
         )}
       </div>
     </aside>

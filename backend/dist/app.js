@@ -6,6 +6,7 @@ import authRoutes from './routes/auth.routes.js';
 import productRoutes from './routes/product.routes.js';
 import receivingRoutes from './routes/receiving.routes.js';
 import inventoryRoutes from './routes/inventory.routes.js';
+import dashboardRoutes from './routes/dashboard.routes.js';
 import { errorHandler, NotFoundError } from './middleware/errorHandler.js';
 export const app = express();
 // Global Middlewares
@@ -28,6 +29,9 @@ app.use('/api/v1/receiving-documents', receivingRoutes);
 // Inventory & Audit Routes
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/v1/inventory', inventoryRoutes);
+// Dashboard Operational Stats
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/v1/dashboard', dashboardRoutes);
 // 404 Handler
 app.use((_req, _res, next) => {
     next(new NotFoundError('The requested endpoint does not exist'));

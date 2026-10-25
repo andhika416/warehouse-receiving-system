@@ -20,9 +20,9 @@ export const PieChart: React.FC<PieChartProps> = ({
 
   const total = data.reduce((sum, item) => sum + item.count, 0);
 
-  // SVG Donut geometry constants
-  const size = 220;
-  const strokeWidth = 32;
+  // SVG Donut geometry constants (compact & balanced)
+  const size = 168;
+  const strokeWidth = 24;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
 
@@ -48,20 +48,20 @@ export const PieChart: React.FC<PieChartProps> = ({
   return (
     <div className="flex flex-col h-full">
       {(title || subtitle) && (
-        <div className="mb-4">
-          {title && <h3 className="text-base font-semibold text-slate-800">{title}</h3>}
-          {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+        <div className="mb-3">
+          {title && <h3 className="text-sm font-semibold text-slate-800">{title}</h3>}
+          {subtitle && <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>}
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row items-center justify-center gap-6 my-auto py-2">
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-5 my-auto py-1">
         {/* SVG Donut */}
         <div className="relative shrink-0 flex items-center justify-center">
           <svg
             width={size}
             height={size}
             viewBox={`0 0 ${size} ${size}`}
-            className="transform -rotate-90 filter drop-shadow-sm transition-all"
+            className="transform -rotate-90 filter drop-shadow-xs transition-all"
           >
             {/* Background track */}
             <circle
@@ -93,14 +93,14 @@ export const PieChart: React.FC<PieChartProps> = ({
                     r={radius}
                     fill="transparent"
                     stroke={slice.color}
-                    strokeWidth={isHovered ? strokeWidth + 6 : strokeWidth}
+                    strokeWidth={isHovered ? strokeWidth + 4 : strokeWidth}
                     strokeDasharray={slice.strokeDasharray}
                     strokeDashoffset={slice.strokeDashoffset}
                     strokeLinecap="butt"
-                    className="transition-all duration-200 cursor-pointer"
+                    className="transition-all duration-150 cursor-pointer"
                     style={{
                       opacity: hoveredIndex === null || isHovered ? 1 : 0.45,
-                      filter: isHovered ? 'brightness(1.1) drop-shadow(0 2px 4px rgba(0,0,0,0.15))' : 'none',
+                      filter: isHovered ? 'brightness(1.08)' : 'none',
                     }}
                     onMouseEnter={() => setHoveredIndex(slice.index)}
                     onMouseLeave={() => setHoveredIndex(null)}
@@ -111,22 +111,22 @@ export const PieChart: React.FC<PieChartProps> = ({
           </svg>
 
           {/* Central Label */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-4">
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-2">
             {activeItem ? (
               <>
-                <span className="text-2xl font-bold text-slate-900 leading-tight">
+                <span className="text-xl font-bold text-slate-900 leading-tight">
                   {activeItem.percent}%
                 </span>
-                <span className="text-[11px] font-medium text-slate-500 truncate max-w-[110px]">
+                <span className="text-[10px] font-medium text-slate-500 truncate max-w-[85px]">
                   {activeItem.count} item
                 </span>
               </>
             ) : (
               <>
-                <span className="text-2xl font-extrabold text-slate-900 leading-tight">
+                <span className="text-xl font-extrabold text-slate-900 leading-tight">
                   {centerValue !== undefined ? centerValue : total}
                 </span>
-                <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
                   {centerLabel}
                 </span>
               </>
@@ -135,7 +135,7 @@ export const PieChart: React.FC<PieChartProps> = ({
         </div>
 
         {/* Legend & Details */}
-        <div className="flex-1 w-full space-y-2">
+        <div className="flex-1 w-full space-y-1.5">
           {slices.map((slice) => {
             const isHovered = hoveredIndex === slice.index;
             return (
@@ -143,34 +143,27 @@ export const PieChart: React.FC<PieChartProps> = ({
                 key={slice.key}
                 onMouseEnter={() => setHoveredIndex(slice.index)}
                 onMouseLeave={() => setHoveredIndex(null)}
-                className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
+                className={`px-3 py-2 rounded-lg border transition-all cursor-pointer flex items-center justify-between gap-2 ${
                   isHovered
-                    ? 'bg-slate-100 border-slate-300 shadow-sm'
-                    : 'bg-slate-50/60 border-slate-200/80 hover:bg-slate-100/60'
+                    ? 'bg-slate-100/90 border-slate-300'
+                    : 'bg-slate-50/70 border-slate-200/70 hover:bg-slate-100/50'
                 }`}
               >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span
-                      className="w-3 h-3 rounded-full shrink-0 shadow-xs"
-                      style={{ backgroundColor: slice.color }}
-                    />
-                    <span className="text-xs font-semibold text-slate-800 truncate">
-                      {slice.label}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0 text-right">
-                    <span className="text-xs font-bold text-slate-900">{slice.count}</span>
-                    <span className="text-[11px] font-medium text-slate-500">
-                      ({slice.percent}%)
-                    </span>
-                  </div>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: slice.color }}
+                  />
+                  <span className="text-xs font-medium text-slate-700 truncate">
+                    {slice.label}
+                  </span>
                 </div>
-                {slice.description && (
-                  <p className="text-[11px] text-slate-500 mt-1 pl-5 line-clamp-1">
-                    {slice.description}
-                  </p>
-                )}
+                <div className="flex items-center gap-1.5 shrink-0 text-right">
+                  <span className="text-xs font-bold text-slate-900">{slice.count}</span>
+                  <span className="text-[10px] text-slate-400">
+                    ({slice.percent}%)
+                  </span>
+                </div>
               </div>
             );
           })}

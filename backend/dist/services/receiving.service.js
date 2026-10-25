@@ -4,7 +4,7 @@ export class ReceivingService {
     /**
      * Buat dokumen receiving baru (Hanya Supervisor)
      */
-    static async createDocument(docNumber, items, supervisorId) {
+    static async createDocument(docNumber, items, supervisorId, operatorUserId) {
         if (!items || items.length === 0) {
             throw new BadRequestError('Receiving document must contain at least one item');
         }
@@ -17,13 +17,17 @@ export class ReceivingService {
             if (existing.rowCount && existing.rowCount > 0) {
                 throw new ConflictError(`Receiving document number '${cleanDocNumber}' already exists`);
             }
+            // Check if items have physical received quantity (operator catat masuk)
+            const hasReceived = items.some((i) => i.receivedQuantity && i.receivedQuantity > 0);
+            const initialDocStatus = hasReceived ? 'IN_PROGRESS' : 'DRAFT';
             // Insert receiving_documents
             const docRes = await client.query(`INSERT INTO receiving_documents (doc_number, status, supervisor_id)
-         VALUES ($1, 'DRAFT', $2)
-         RETURNING *`, [cleanDocNumber, supervisorId]);
+         VALUES ($1, $2, $3)
+         RETURNING *`, [cleanDocNumber, initialDocStatus, supervisorId]);
             const doc = docRes.rows[0];
             // Insert line items
             const createdItems = [];
+            let completedCount = 0;
             for (const item of items) {
                 if (item.expectedQuantity <= 0) {
                     throw new BadRequestError(`Expected quantity must be strictly greater than 0 for product ${item.productId}`);
@@ -35,9 +39,30 @@ export class ReceivingService {
                 if (prodCheck.rowCount === 0) {
                     throw new NotFoundError(`Product with id '${item.productId}' not found`);
                 }
+                const recQty = Math.min(item.expectedQuantity, Math.max(0, item.receivedQuantity || 0));
+                let itemStatus = 'PENDING';
+                if (recQty >= item.expectedQuantity) {
+                    itemStatus = 'COMPLETED';
+                    completedCount++;
+                }
+                else if (recQty > 0) {
+                    itemStatus = 'PARTIAL';
+                }
                 const itemRes = await client.query(`INSERT INTO receiving_items (receiving_document_id, product_id, expected_quantity, received_quantity, status)
-           VALUES ($1, $2, $3, 0, 'PENDING')
-           RETURNING *`, [doc.id, item.productId, item.expectedQuantity]);
+           VALUES ($1, $2, $3, $4, $5)
+           RETURNING *`, [doc.id, item.productId, item.expectedQuantity, recQty, itemStatus]);
+                // If items were received by operator, update inventories and log audit transaction
+                if (recQty > 0) {
+                    await client.query(`INSERT INTO inventories (product_id, quantity, updated_at)
+             VALUES ($1, $2, CURRENT_TIMESTAMP)
+             ON CONFLICT (product_id) 
+             DO UPDATE SET 
+               quantity = inventories.quantity + EXCLUDED.quantity,
+               updated_at = CURRENT_TIMESTAMP`, [item.productId, recQty]);
+                    await client.query(`INSERT INTO inventory_transactions 
+               (product_id, receiving_document_id, type, quantity, created_by, created_at)
+             VALUES ($1, $2, 'INBOUND_RECEIVING', $3, $4, CURRENT_TIMESTAMP)`, [item.productId, doc.id, recQty, operatorUserId || supervisorId]);
+                }
                 createdItems.push({
                     ...itemRes.rows[0],
                     sku: prodCheck.rows[0].sku,
@@ -48,7 +73,7 @@ export class ReceivingService {
             return {
                 ...doc,
                 total_items: createdItems.length,
-                completed_items: 0,
+                completed_items: completedCount,
                 items: createdItems,
             };
         }
@@ -67,7 +92,7 @@ export class ReceivingService {
         const offset = (page - 1) * limit;
         const params = [];
         let whereClause = '';
-        if (status) {
+        if (status && status !== 'ALL') {
             params.push(status);
             whereClause = 'WHERE rd.status = $1';
         }

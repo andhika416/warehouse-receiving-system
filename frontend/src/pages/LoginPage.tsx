@@ -63,8 +63,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNotify }) => {
       {/* Background Decor: Warehouse Isometric Grid Pattern & Soft Ambient Glow */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {/* Soft Radial Ambient Glow */}
-        <div className="absolute -top-[15%] left-1/2 -translate-x-1/2 w-[720px] h-[520px] bg-gradient-to-b from-emerald-500/10 via-teal-500/5 to-transparent rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-[20%] right-[5%] w-[480px] h-[480px] bg-emerald-600/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -top-[15%] left-1/2 -translate-x-1/2 w-[280px] h-[200px] bg-gradient-to-b from-emerald-500/10 via-teal-500/5 to-transparent rounded-full blur-3xl pointer-events-none sm:w-[480px] sm:h-[320px]" />
+        <div className="absolute -bottom-[20%] right-[5%] w-[180px] h-[180px] bg-emerald-600/5 rounded-full blur-3xl pointer-events-none sm:w-[320px] sm:h-[320px]" />
 
         {/* Warehouse Isometric Scaffolding & Geometric Grid Pattern */}
         <svg
@@ -134,7 +134,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNotify }) => {
       {/* Main Container */}
       <div className="w-full max-w-[440px] relative z-10">
         {/* Center Card: High-contrast white card (#FFFFFF) with subtle drop-shadow (shadow-xl) and smooth rounded corners (rounded-2xl) */}
-        <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/80 border border-slate-100 p-7 sm:p-9 transition-all">
+        <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/80 border border-slate-100 p-7 sm:p-9 sm:max-w-md mx-auto transition-all">
           
           {/* 1. Header */}
           <div className="mb-6">
@@ -270,7 +270,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNotify }) => {
                     }
                   }}
                   placeholder="Contoh: supervisor atau operator"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none transition-all shadow-sm"
+                  className="w-full pl-8 pr-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none transition-all shadow-sm sm:pr-6"
                 />
               </div>
             </div>
@@ -294,7 +294,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNotify }) => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Masukkan kata sandi Anda"
-                  className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none transition-all shadow-sm"
+                  className="w-full pl-8 pr-10 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none transition-all shadow-sm sm:pr-6"
                 />
                 {/* Eye toggle icon to unmask */}
                 <button
@@ -317,7 +317,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNotify }) => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full mt-2 py-3 px-4 rounded-xl font-bold text-sm bg-[#059669] hover:bg-[#047857] active:bg-[#065f46] text-white shadow-md shadow-emerald-700/20 hover:shadow-lg hover:shadow-emerald-700/25 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-all duration-150 transform active:scale-[0.99] flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+              className="w-full min-h-[44px] mt-2 py-3 px-4 rounded-xl font-bold text-sm bg-[#059669] hover:bg-[#047857] active:bg-[#065f46] text-white shadow-md shadow-emerald-700/20 hover:shadow-lg hover:shadow-emerald-700/25 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-all duration-150 transform active:scale-[0.99] flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer sm:min-h-[48px]"
             >
               {isLoading ? (
                 <>

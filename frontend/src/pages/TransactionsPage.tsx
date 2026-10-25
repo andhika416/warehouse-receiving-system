@@ -3,6 +3,9 @@ import { api } from '../api/client.js';
 import type { InventoryTransaction } from '../types/index.js';
 import { Modal } from '../components/Modal.js';
 import { Pagination } from '../components/Pagination.js';
+import { useAuth } from '../context/AuthContext.js';
+import { exportToExcel, printToPDF, exportToCSV, type ExportColumn } from '../utils/exportUtils.js';
+import { ExportButtonGroup } from '../components/common/ExportButtonGroup.js';
 import {
   History,
   RefreshCw,
@@ -11,7 +14,6 @@ import {
   FileText,
   User,
   Search,
-  FileSpreadsheet,
   X,
   PackageOpen,
   Eye,
@@ -77,83 +79,115 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({ onNotify }) 
     return filteredTransactions.slice(start, start + PAGE_SIZE);
   }, [filteredTransactions, currentPage]);
 
-  // Export CSV
+  const { user, role } = useAuth();
+
+  const exportColumns: ExportColumn[] = [
+    { header: 'No', key: '_index', width: 40, align: 'center' },
+    {
+      header: 'Waktu Transaksi',
+      key: 'created_at',
+      width: 140,
+      align: 'center',
+      format: (val) => (val ? new Date(val).toLocaleString('id-ID') : '-'),
+    },
+    { header: 'Tipe Mutasi', key: 'type', width: 90, align: 'center' },
+    { header: 'SKU Produk', key: 'sku', width: 110 },
+    { header: 'Nama Produk', key: 'product_name', width: 220 },
+    { header: 'No. Dokumen', key: 'doc_number', width: 140, align: 'center' },
+    {
+      header: 'Kuantitas Masuk',
+      key: 'quantity',
+      width: 100,
+      align: 'right',
+      format: (val) => Number(val || 0),
+    },
+    { header: 'Operator Gudang', key: 'operator_username', width: 120 },
+  ];
+
+  const getExportOptions = () => ({
+    title: 'Laporan Riwayat Mutasi & Audit Log Stok',
+    subtitle: search ? `Filter Pencarian: "${search}"` : 'Semua Rekaman Mutasi Barang Masuk',
+    filename: `logiflow_audit_mutasi_${new Date().toISOString().split('T')[0]}`,
+    columns: exportColumns,
+    data: filteredTransactions,
+    summaryItems: [
+      { label: 'Total Rekaman', value: filteredTransactions.length },
+      {
+        label: 'Total Fisik Masuk',
+        value: `${filteredTransactions
+          .reduce((sum, tx) => sum + (tx.quantity || 0), 0)
+          .toLocaleString('id-ID')} unit`,
+      },
+    ],
+    printedBy: { name: user?.username, role: role || 'Pengguna' },
+  });
+
+  const handleExportPDF = () => {
+    if (filteredTransactions.length === 0) {
+      onNotify('warning', 'Tidak ada riwayat mutasi untuk dicetak.');
+      return;
+    }
+    printToPDF(getExportOptions());
+    onNotify('success', 'Jendela cetak PDF audit mutasi berhasil disiapkan!');
+  };
+
+  const handleExportExcel = () => {
+    if (filteredTransactions.length === 0) {
+      onNotify('warning', 'Tidak ada riwayat mutasi untuk diekspor.');
+      return;
+    }
+    exportToExcel(getExportOptions());
+    onNotify('success', `${filteredTransactions.length} rekaman transaksi berhasil diekspor ke Excel (.xls)!`);
+  };
+
   const handleExportCSV = () => {
     if (filteredTransactions.length === 0) {
       onNotify('warning', 'Tidak ada riwayat mutasi untuk diekspor.');
       return;
     }
-
-    const headers = [
-      'Waktu Transaksi',
-      'Tipe Mutasi',
-      'SKU',
-      'Nama Produk',
-      'No. Dokumen',
-      'Kuantitas Masuk',
-      'Operator',
-    ];
-
-    const rows = filteredTransactions.map((tx) => [
-      `"${new Date(tx.created_at).toLocaleString('id-ID')}"`,
-      `"${tx.type}"`,
-      `"${tx.sku}"`,
-      `"${tx.product_name.replace(/"/g, '""')}"`,
-      `"${tx.doc_number}"`,
-      tx.quantity,
-      `"${tx.operator_username}"`,
-    ]);
-
-    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `logiflow_audit_mutasi_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    onNotify('success', `${filteredTransactions.length} rekaman transaksi berhasil diekspor ke CSV!`);
+    exportToCSV(getExportOptions());
+    onNotify('success', `${filteredTransactions.length} rekaman transaksi berhasil diekspor ke format CSV!`);
   };
 
   return (
-    <div className="space-y-6 font-sans text-slate-900 pb-12">
-      {/* 1. Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700">
-              <History className="w-5 h-5" />
-            </div>
-            <span>Riwayat Transaksi & Kartu Stok (Audit Log)</span>
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Jejak audit permanen (append-only) setiap mutasi fisik barang masuk yang dicatat oleh sistem
-          </p>
-        </div>
+    <div className="font-sans text-slate-900">
+      {/* 1. Fixed / Sticky Page Header Bar (Flush with Navbar) */}
+      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md border-b border-slate-200/80 px-6 lg:px-8 py-3.5 mb-6 shadow-2xs">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
+                <History className="w-5 h-5" />
+              </div>
+              <span>Riwayat Transaksi & Kartu Stok (Audit Log)</span>
+            </h1>
+            <p className="text-sm text-slate-500 mt-1">
+              Jejak audit permanen (append-only) setiap mutasi fisik barang masuk yang dicatat oleh sistem
+            </p>
+          </div>
 
-        <div className="flex items-center gap-2.5">
-          <button
-            onClick={fetchTransactions}
-            title="Muat Ulang Transaksi"
-            className="p-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition shadow-sm cursor-pointer"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-600' : ''}`} />
-          </button>
+          <div className="flex items-center gap-2.5 shrink-0">
+            <button
+              onClick={fetchTransactions}
+              title="Muat Ulang Transaksi"
+              className="p-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition shadow-sm cursor-pointer"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-600' : ''}`} />
+            </button>
 
-          <button
-            type="button"
-            onClick={handleExportCSV}
-            className="flex items-center gap-2 px-3.5 py-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs sm:text-sm shadow-sm transition cursor-pointer"
-          >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-            <span>Ekspor CSV</span>
-          </button>
+            <ExportButtonGroup
+              onExportPDF={handleExportPDF}
+              onExportExcel={handleExportExcel}
+              onExportCSV={handleExportCSV}
+              disabled={loading || filteredTransactions.length === 0}
+            />
+          </div>
         </div>
       </div>
 
-      {/* 2. Audit Guarantee Banner */}
+      {/* 2. Main Body Content */}
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 pb-12 space-y-6">
+        {/* 2. Audit Guarantee Banner */}
       <div className="p-4 rounded-xl bg-white border border-slate-200/90 shadow-sm flex items-center gap-3 text-xs text-slate-600">
         <div className="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
           <ShieldCheck className="w-5 h-5" />
@@ -409,6 +443,7 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({ onNotify }) 
           </div>
         )}
       </Modal>
+      </div>
     </div>
   );
 };

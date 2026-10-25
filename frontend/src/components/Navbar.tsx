@@ -16,7 +16,6 @@ import {
   FileCheck2,
   Menu,
 } from 'lucide-react';
-import { api } from '../api/client.js';
 
 interface NavbarProps {
   onToggleSidebar?: () => void;
@@ -30,21 +29,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   const { user, role, logout } = useAuth();
   const { notifications, unreadCount, loading: notifLoading, refreshNotifications, navigateToNotification } =
     useNotifications();
-
-  const [dbHealthy, setDbHealthy] = useState<boolean | null>(null);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    api
-      .get('/health')
-      .then((res) => {
-        setDbHealthy(res.data.database?.status === 'CONNECTED');
-      })
-      .catch(() => {
-        setDbHealthy(false);
-      });
-  }, []);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -112,22 +98,6 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       <div className="flex items-center gap-3 sm:gap-4">
-        {/* Database Health Indicator */}
-        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-xs">
-          <span
-            className={`w-2 h-2 rounded-full ${
-              dbHealthy === true
-                ? 'bg-emerald-400 shadow-sm shadow-emerald-400'
-                : dbHealthy === false
-                ? 'bg-rose-400 shadow-sm shadow-rose-400'
-                : 'bg-amber-400 animate-ping'
-            }`}
-          />
-          <span className="text-slate-400">Database:</span>
-          <span className="font-medium text-slate-200">
-            {dbHealthy === true ? 'Terhubung' : dbHealthy === false ? 'Terputus' : 'Memeriksa'}
-          </span>
-        </div>
 
         {/* NOTIFICATION BELL WITH COUNTER BADGE */}
         <div className="relative" ref={dropdownRef}>
