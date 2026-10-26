@@ -21,11 +21,10 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Clear token on unauthorized if not on login page
-      if (!window.location.pathname.includes('login')) {
-        localStorage.removeItem('wrs_access_token');
-        localStorage.removeItem('wrs_user');
-      }
+      // Clear token on unauthorized
+      localStorage.removeItem('wrs_access_token');
+      localStorage.removeItem('wrs_user');
+      window.dispatchEvent(new CustomEvent('auth:unauthorized'));
     }
     return Promise.reject(error);
   }

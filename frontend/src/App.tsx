@@ -12,7 +12,7 @@ import { TransactionsPage } from './pages/TransactionsPage.js';
 import { ReceivingsPage } from './pages/ReceivingsPage.js';
 
 const MainLayout: React.FC = () => {
-  const { isAuthenticated, role } = useAuth();
+  const { isAuthenticated, role, user } = useAuth();
   const { setNavigationHandler, refreshNotifications } = useNotifications();
 
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
@@ -62,6 +62,33 @@ const MainLayout: React.FC = () => {
     });
   }, [setNavigationHandler]);
 
+  // Guarantee that whenever user logs in or authentication identity changes, it ALWAYS lands directly on dashboard
+  useEffect(() => {
+    if (isAuthenticated) {
+      setActiveTab('dashboard');
+      setSelectedDocId(null);
+      setIsCreateModalOpen(false);
+      setIsMobileMenuOpen(false);
+    }
+  }, [isAuthenticated, user?.id]);
+
+  // Clean up all navigation and modal state upon logout / unauthenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setActiveTab('dashboard');
+      setSelectedDocId(null);
+      setIsCreateModalOpen(false);
+      setIsMobileMenuOpen(false);
+    }
+  }, [isAuthenticated]);
+
+  // Role guard: if OPERATOR is on supervisor-only tabs (e.g. transactions), redirect to dashboard
+  useEffect(() => {
+    if (role === 'OPERATOR' && activeTab === 'transactions') {
+      setActiveTab('dashboard');
+    }
+  }, [role, activeTab]);
+
   const addToast = (type: 'success' | 'error' | 'warning' | 'info', message: string, title?: string) => {
     const id = `${Date.now()}-${Math.random()}`;
     setToasts((prev) => [...prev, { id, type, message, title }]);
@@ -79,7 +106,15 @@ const MainLayout: React.FC = () => {
   if (!isAuthenticated) {
     return (
       <>
-        <LoginPage onNotify={(type, msg) => addToast(type, msg)} />
+        <LoginPage
+          onNotify={(type, msg) => addToast(type, msg)}
+          onLoginSuccess={() => {
+            setActiveTab('dashboard');
+            setSelectedDocId(null);
+            setIsCreateModalOpen(false);
+            setIsMobileMenuOpen(false);
+          }}
+        />
         <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       </>
     );
@@ -121,7 +156,9 @@ const MainLayout: React.FC = () => {
         />
 
         <main className="flex-1 min-h-0 overflow-y-auto bg-slate-50 text-slate-900 font-sans w-full">
-          {activeTab === 'dashboard' && (
+          {(activeTab === 'dashboard' ||
+            (activeTab === 'transactions' && role !== 'SUPERVISOR') ||
+            !['receivings', 'products', 'inventory', 'transactions'].includes(activeTab)) && (
             <DashboardPage
               onNavigate={(tab, docId) => {
                 setActiveTab(tab);

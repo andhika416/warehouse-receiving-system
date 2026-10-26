@@ -15,9 +15,10 @@ import {
 
 interface LoginPageProps {
   onNotify: (type: 'success' | 'error' | 'warning', message: string) => void;
+  onLoginSuccess?: () => void;
 }
 
-export const LoginPage: React.FC<LoginPageProps> = ({ onNotify }) => {
+export const LoginPage: React.FC<LoginPageProps> = ({ onNotify, onLoginSuccess }) => {
   const { login, isLoading } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -36,6 +37,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNotify }) => {
     try {
       await login(username.trim(), password);
       onNotify('success', `Selamat datang kembali, ${username.trim()}!`);
+      if (onLoginSuccess) {
+        onLoginSuccess();
+      }
     } catch (err: any) {
       const msg =
         err.response?.data?.message ||
