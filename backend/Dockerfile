@@ -22,20 +22,26 @@ COPY src/ ./src/
 RUN npm run build
 
 # ------------------------------------------------------------------------------
-# Stage 2: Production runner stage
+# Stage 2: Runner stage (Server + In-Container QA Testing Support)
 # ------------------------------------------------------------------------------
 FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-ENV NODE_ENV=production
-
-# Install only production dependencies
+# Install dependencies including test tools (Jest, ts-jest, supertest)
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm ci
+
+# Copy configs, source code, and tests for runtime & test execution
+COPY tsconfig.json jest.config.js ./
+COPY src/ ./src/
+COPY tests/ ./tests/
 
 # Copy compiled JavaScript output from builder stage
 COPY --from=builder /app/dist ./dist
+
+# Set production environment
+ENV NODE_ENV=production
 
 # Expose backend REST API port
 EXPOSE 5000

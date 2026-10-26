@@ -1,0 +1,112 @@
+%% ==============================================================================
+%% Warehouse Receiving System (WRS) - Data Flow Diagram (DFD)
+%% Architecture: Specification-Driven Development (SDD)
+%% Format: Mermaid Flowchart (Context & Detailed Process Data Flow)
+%% ==============================================================================
+
+flowchart TB
+    %% -------------------------------------------------------------------------
+    %% External Entities
+    %% -------------------------------------------------------------------------
+    subgraph ExternalEntities ["External Entities (Aktor Sistem)"]
+        SPV["👤 Warehouse Supervisor"]
+        OPR["👷 Warehouse Operator"]
+    end
+
+    %% -------------------------------------------------------------------------
+    %% Data Stores (PostgreSQL 15+ Tables)
+    %% -------------------------------------------------------------------------
+    subgraph DataStores ["Data Stores (PostgreSQL Database)"]
+        D1[("D1: users")]
+        D2[("D2: products")]
+        D3[("D3: receiving_documents")]
+        D4[("D4: receiving_items")]
+        D5[("D5: inventories")]
+        D6[("D6: inventory_transactions\n(Immutable Ledger)")]
+    end
+
+    %% -------------------------------------------------------------------------
+    %% Core System Processes
+    %% -------------------------------------------------------------------------
+    subgraph CoreProcesses ["Core System Processes (Logika Bisnis WRS)"]
+        P1["1.0 Autentikasi & RBAC\n(JWT Token & Permission Check)"]
+        P2["2.0 Manajemen Katalog Produk\n(Master SKU & Unit)"]
+        P3["3.0 Pembuatan Dokumen Receiving\n(Inisialisasi Ekspektasi Inbound)"]
+        P4["4.0 Validasi Fisik & Anti Over-Receiving\n(Pessimistic Row Locking & Atomic Mutex)"]
+        P5["5.0 Sinkronisasi Stok & Mutasi Kartu Stok\n(Real-Time Inventory & Immutable Audit Log)"]
+        P6["6.0 Verifikasi Kelengkapan & Penutupan\n(Validasi 100% Item & Lock Dokumen)"]
+        P7["7.0 Reporting & Audit Dashboard\n(Saldo Stok, KPI Gudang, & Traceability)"]
+    end
+
+    %% -------------------------------------------------------------------------
+    %% Data Flows: Process 1.0 (Autentikasi)
+    %% -------------------------------------------------------------------------
+    SPV -->|"Kredensial Login (Username & Password)"| P1
+    OPR -->|"Kredensial Login (Username & Password)"| P1
+    P1 -->|"Verifikasi Hash Password & Role"| D1
+    D1 -->|"Data User & Role Otoritas"| P1
+    P1 -->|"JWT Access Token & User Identity"| SPV
+    P1 -->|"JWT Access Token & User Identity"| OPR
+
+    %% -------------------------------------------------------------------------
+    %% Data Flows: Process 2.0 (Master Produk)
+    %% -------------------------------------------------------------------------
+    SPV -->|"Data Produk Baru (SKU, Nama, Satuan)"| P2
+    P2 -->|"Insert / Update Master SKU"| D2
+    P2 -->|"Inisialisasi Saldo Awal (Qty: 0)"| D5
+    D2 -->|"Informasi Produk & Satuan"| P3
+    D2 -->|"Pencocokan SKU saat Scan"| P4
+
+    %% -------------------------------------------------------------------------
+    %% Data Flows: Process 3.0 (Pembuatan Dokumen)
+    %% -------------------------------------------------------------------------
+    SPV -->|"Input PO / Ref & Kuantitas Ekspektasi"| P3
+    P3 -->|"Create Header Dokumen (Status: DRAFT)"| D3
+    P3 -->|"Create Line Items (Status: PENDING)"| D4
+    D3 -->|"Notifikasi Dokumen Aktif"| OPR
+
+    %% -------------------------------------------------------------------------
+    %% Data Flows: Process 4.0 & 5.0 (Eksekusi Penerimaan Fisik & Stok)
+    %% -------------------------------------------------------------------------
+    OPR -->|"Scan Barcode SKU & Input Qty Fisik Masuk"| P4
+    
+    P4 <-->|"SELECT ... FOR UPDATE (Kunci Baris Dokumen)"| D3
+    P4 <-->|"SELECT ... FOR UPDATE (Kunci Baris Item)"| D4
+    
+    P4 -->|"Evaluasi: received + input <= expected?"| P4
+    
+    alt Over-Receiving Terdeteksi
+        P4 -.->|"ROLLBACK & Return HTTP 422 (Ditolak)"| OPR
+    else Kuantitas Valid
+        P4 -->|"Update received_quantity & status (PARTIAL/COMPLETED)"| D4
+        P4 -->|"Update Status Header ke IN_PROGRESS"| D3
+        
+        %% Memicu Proses 5.0
+        P4 -->|"Trigger Mutasi Stok Atomik"| P5
+        P5 <-->|"SELECT ... FOR UPDATE & Increment Saldo"| D5
+        P5 -->|"Append Audit Log (Item, Qty, Operator, Timestamp)"| D6
+        
+        P5 -->|"Konfirmasi Penerimaan Berhasil (HTTP 200)"| OPR
+    end
+
+    %% -------------------------------------------------------------------------
+    %% Data Flows: Process 6.0 (Penyelesaian Dokumen)
+    %% -------------------------------------------------------------------------
+    SPV -->|"Request Complete Dokumen (:id/complete)"| P6
+    P6 <-->|"Periksa Status Seluruh Item Dokumen"| D4
+    
+    alt Masih Ada Item PENDING atau PARTIAL
+        P6 -.->|"Tolak Penutupan (HTTP 400 Bad Request)"| SPV
+    else Seluruh Item 100% COMPLETED
+        P6 -->|"Update Status Header ke COMPLETED (Locked)"| D3
+        P6 -->|"Dokumen Resmi Ditutup & Terkunci Permanen"| SPV
+    end
+
+    %% -------------------------------------------------------------------------
+    %% Data Flows: Process 7.0 (Monitoring & Reporting)
+    %% -------------------------------------------------------------------------
+    D5 -->|"Data Saldo Inventaris"| P7
+    D6 -->|"Histori Mutasi Kartu Stok"| P7
+    D3 -->|"Status Progres Inbound"| P7
+    P7 -->|"Tampilan Dashboard, Kartu Stok, & Log Audit"| SPV
+    P7 -->|"Tampilan Saldo Produk & Status Dokumen"| OPR

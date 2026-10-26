@@ -73,6 +73,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
  */
 router.post(
   '/',
+  requireRole('SUPERVISOR'),
   validate(createDocumentSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -83,13 +84,7 @@ router.post(
         receivedQuantity: i.received_quantity,
       }));
 
-      let supervisorId = req.user!.id;
-      if (req.user!.role === 'OPERATOR') {
-        const supRes = await query("SELECT id FROM users WHERE role = 'SUPERVISOR' LIMIT 1");
-        if (supRes.rowCount && supRes.rowCount > 0) {
-          supervisorId = supRes.rows[0].id;
-        }
-      }
+      const supervisorId = req.user!.id;
 
       const document = await ReceivingService.createDocument(
         doc_number,

@@ -113,6 +113,7 @@ warehouse-receiving-system/
 ├── docs/                       # Single Source of Truth (SSOT) Dokumen Spesifikasi
 │   ├── prd.md                  # Product Requirements Document & Business Rules
 │   ├── erd.mmd                 # Entity Relationship Diagram (Mermaid)
+│   ├── data-flow.mmd           # Data Flow Diagram (DFD) & Transaksi Atomik
 │   ├── technical-spec.md       # Arsitektur, DDL PostgreSQL, dan Row-Level Locking
 │   ├── openapi.yaml            # Spesifikasi Kontrak REST API (OpenAPI 3.0.3)
 │   ├── testing.md              # Laporan QA & Matriks Pengujian Otomatis
@@ -129,5 +130,6 @@ warehouse-receiving-system/
 
 Untuk detail arsitektur dan spesifikasi bisnis lengkap, silakan kunjungi:
 - **[Dokumentasi SSOT Lengkap](/docs/README.md)**
+- **[Data Flow Diagram (DFD)](/docs/data-flow.mmd)**
 - **[Laporan Alur Kerja AI & SDD](/docs/ai-workflow.md)**
 - **[Laporan Pengujian Otomatis QA](/docs/testing.md)**

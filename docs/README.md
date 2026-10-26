@@ -46,3 +46,8 @@ Dokumentasi ini merupakan **Single Source of Truth (SSOT)** arsitektur dan spesi
    - Rangkuman penerapan metodologi Specification-Driven Development (SDD).
    - Analisis & evaluasi 3 prompt terpenting yang memandu implementasi DDL, business logic transaksional, dan automated test suite.
    - Refleksi efektivitas AI dan best practices prompt engineering.
+
+7. **[Data Flow Diagram (DFD)](file:///d:/laragon/www/warehouse-receiving-system/docs/data-flow.mmd)**
+   - Diagram alir data visual (format Mermaid native) yang memetakan interaksi antara entitas eksternal (Supervisor & Operator), 7 proses utama sistem, dan 6 data store PostgreSQL.
+   - Menggambarkan alur pencegahan *over-receiving* dan mutasi transaksi secara eksplisit.
+
