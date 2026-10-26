@@ -41,3 +41,8 @@ Dokumentasi ini merupakan **Single Source of Truth (SSOT)** arsitektur dan spesi
      - Skenario 3: Test Data Integrity (ACID transaction, sinkronisasi stok, immutable audit ledger).
      - Skenario 4: Test Validasi Akses & RBAC (Pencegahan akses Operator ke fitur Supervisor).
    - Panduan cara menjalankan tes dan daftar *known limitations* dari sistem.
+
+6. **[AI Workflow & Specification-Driven Development Report](file:///d:/laragon/www/warehouse-receiving-system/docs/ai-workflow.md)**
+   - Rangkuman penerapan metodologi Specification-Driven Development (SDD).
+   - Analisis & evaluasi 3 prompt terpenting yang memandu implementasi DDL, business logic transaksional, dan automated test suite.
+   - Refleksi efektivitas AI dan best practices prompt engineering.
