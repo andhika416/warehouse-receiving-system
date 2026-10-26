@@ -208,33 +208,33 @@ export const ReceivingDetailPage: React.FC<ReceivingDetailPageProps> = ({
   return (
     <div className={`space-y-5 font-sans text-slate-900 ${isModal ? 'pb-2' : 'pb-12'}`}>
       {/* 1. Header Information & Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-xl bg-slate-50 border border-slate-200">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
           {!isModal && (
             <button
               onClick={onBack}
               title="Kembali ke Daftar Dokumen"
-              className="p-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition shadow-sm cursor-pointer"
+              className="p-2 sm:p-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition shadow-sm cursor-pointer shrink-0"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
           )}
-          <div>
-            <div className="flex items-center gap-2.5">
-              <span className="text-xl font-bold tracking-tight text-slate-900 font-mono">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 font-mono truncate">
                 {document.doc_number}
               </span>
-              <StatusBadge status={document.status} />
+              <StatusBadge status={document.status} size="sm" />
             </div>
-            <div className="flex items-center gap-4 text-xs text-slate-500 mt-1">
+            <div className="flex items-center gap-2 sm:gap-4 text-xs text-slate-500 mt-1 flex-wrap">
               <span className="flex items-center gap-1.5">
-                <User className="w-3.5 h-3.5 text-slate-400" />
-                <span>
+                <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <span className="truncate">
                   Supervisor: <strong>{document.supervisor_username}</strong>
                 </span>
               </span>
               <span className="flex items-center gap-1.5 font-mono">
-                <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 <span>
                   {new Date(document.created_at).toLocaleDateString('id-ID', {
                     day: 'numeric',
@@ -247,7 +247,7 @@ export const ReceivingDetailPage: React.FC<ReceivingDetailPageProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
           <button
             onClick={fetchDocumentDetail}
             title="Muat Ulang Dokumen"
@@ -448,8 +448,8 @@ export const ReceivingDetailPage: React.FC<ReceivingDetailPageProps> = ({
           </span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm border-collapse">
+        <div className="overflow-x-auto -mx-0.5">
+          <table className="w-full min-w-[580px] text-left text-sm border-collapse">
             <thead className="bg-slate-50/90 border-b border-slate-200 text-xs font-semibold uppercase tracking-wider text-slate-600">
               <tr>
                 <th className="py-3 px-4">SKU / Nama Barang</th>

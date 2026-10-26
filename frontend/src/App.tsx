@@ -19,6 +19,7 @@ const MainLayout: React.FC = () => {
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
     try {
       const saved = localStorage.getItem('warehouse_sidebar_collapsed');
@@ -40,10 +41,19 @@ const MainLayout: React.FC = () => {
     });
   };
 
+  const handleToggleMobileMenu = () => {
+    setIsMobileMenuOpen((prev) => !prev);
+  };
+
+  const handleCloseMobileMenu = () => {
+    setIsMobileMenuOpen(false);
+  };
+
   // Connect notification click handler with internal navigation
   useEffect(() => {
     setNavigationHandler((tab: NavTab, docId?: string) => {
       setActiveTab(tab);
+      setIsMobileMenuOpen(false);
       if (docId) {
         setSelectedDocId(docId);
       } else {
@@ -78,6 +88,7 @@ const MainLayout: React.FC = () => {
   const handleTabChange = (tab: NavTab) => {
     setActiveTab(tab);
     setSelectedDocId(null);
+    setIsMobileMenuOpen(false);
   };
 
   return (
@@ -85,6 +96,8 @@ const MainLayout: React.FC = () => {
       <Navbar
         onToggleSidebar={handleToggleSidebar}
         isSidebarCollapsed={isSidebarCollapsed}
+        onToggleMobileMenu={handleToggleMobileMenu}
+        isMobileMenuOpen={isMobileMenuOpen}
       />
 
       <div className="flex-1 min-h-0 flex overflow-hidden relative">
@@ -93,22 +106,26 @@ const MainLayout: React.FC = () => {
           onTabChange={handleTabChange}
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={handleToggleSidebar}
+          isMobileOpen={isMobileMenuOpen}
+          onCloseMobile={handleCloseMobileMenu}
           onOpenCreateModal={
             role === 'SUPERVISOR'
               ? () => {
                   setActiveTab('receivings');
                   setSelectedDocId(null);
                   setIsCreateModalOpen(true);
+                  setIsMobileMenuOpen(false);
                 }
               : undefined
           }
         />
 
-        <main className="flex-1 min-h-0 overflow-y-auto bg-slate-50 text-slate-900 font-sans">
+        <main className="flex-1 min-h-0 overflow-y-auto bg-slate-50 text-slate-900 font-sans w-full">
           {activeTab === 'dashboard' && (
             <DashboardPage
               onNavigate={(tab, docId) => {
                 setActiveTab(tab);
+                setIsMobileMenuOpen(false);
                 if (docId) {
                   setSelectedDocId(docId);
                 } else {
@@ -121,6 +138,7 @@ const MainLayout: React.FC = () => {
                       setActiveTab('receivings');
                       setSelectedDocId(null);
                       setIsCreateModalOpen(true);
+                      setIsMobileMenuOpen(false);
                     }
                   : undefined
               }

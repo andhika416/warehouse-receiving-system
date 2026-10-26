@@ -152,25 +152,25 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({ onNotify }) 
   return (
     <div className="font-sans text-slate-900">
       {/* 1. Fixed / Sticky Page Header Bar (Flush with Navbar) */}
-      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md border-b border-slate-200/80 px-6 lg:px-8 py-3.5 mb-6 shadow-2xs">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md border-b border-slate-200/80 px-3.5 sm:px-6 lg:px-8 py-3 sm:py-3.5 mb-4 sm:mb-6 shadow-2xs">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
-                <History className="w-5 h-5" />
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2 sm:gap-2.5 flex-wrap">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
+                <History className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <span>Riwayat Transaksi & Kartu Stok (Audit Log)</span>
             </h1>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-xs sm:text-sm text-slate-500 mt-1">
               Jejak audit permanen (append-only) setiap mutasi fisik barang masuk yang dicatat oleh sistem
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 flex-wrap sm:flex-nowrap">
             <button
               onClick={fetchTransactions}
               title="Muat Ulang Transaksi"
-              className="p-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition shadow-sm cursor-pointer"
+              className="p-2 sm:p-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition shadow-sm cursor-pointer"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-600' : ''}`} />
             </button>
@@ -186,13 +186,13 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({ onNotify }) 
       </div>
 
       {/* 2. Main Body Content */}
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 pb-12 space-y-6">
+      <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 pb-12 space-y-4 sm:space-y-6">
         {/* 2. Audit Guarantee Banner */}
-      <div className="p-4 rounded-xl bg-white border border-slate-200/90 shadow-sm flex items-center gap-3 text-xs text-slate-600">
-        <div className="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
-          <ShieldCheck className="w-5 h-5" />
+      <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-slate-200/90 shadow-sm flex items-center gap-3 text-xs text-slate-600">
+        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+          <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5" />
         </div>
-        <div>
+        <div className="text-xs leading-relaxed">
           <span className="font-bold text-slate-900">Prinsip Audit Trail Mutlak:</span> Seluruh
           transaksi mutasi di tabel ini bersifat <strong className="text-emerald-700">immutable</strong> (tidak
           dapat diubah atau dihapus) dan mengikat identitas operator pelaksana beserta nomor dokumen
@@ -201,20 +201,20 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({ onNotify }) 
       </div>
 
       {/* 3. Search Bar */}
-      <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center justify-between gap-3">
-        <div className="relative flex-1 max-w-lg">
+      <div className="bg-white p-3 sm:p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center justify-between gap-3">
+        <div className="relative flex-1 w-full md:max-w-lg">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5 pointer-events-none" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Cari berdasarkan SKU, nama produk, nomor dokumen, atau operator..."
-            className="w-full pl-10 pr-9 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition shadow-inner"
+            className="w-full pl-10 pr-9 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition shadow-inner"
           />
           {search && (
             <button
               onClick={() => setSearch('')}
-              className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 cursor-pointer"
+              className="absolute right-3 top-2.5 sm:top-3 text-slate-400 hover:text-slate-600 cursor-pointer"
               title="Hapus pencarian"
             >
               <X className="w-4 h-4" />
@@ -225,8 +225,8 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({ onNotify }) 
 
       {/* 4. Table View with "Buka Detail" */}
       <div className="bg-white rounded-xl border border-slate-200/90 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm border-collapse">
+        <div className="overflow-x-auto -mx-0.5">
+          <table className="w-full min-w-[680px] text-left text-sm border-collapse">
             <thead className="bg-slate-50/90 border-b border-slate-200 text-xs font-semibold uppercase tracking-wider text-slate-600">
               <tr>
                 <th className="py-3.5 px-5">Waktu Transaksi</th>

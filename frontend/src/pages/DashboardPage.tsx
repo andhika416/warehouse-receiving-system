@@ -126,21 +126,21 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   return (
     <div>
       {/* 1. Fixed / Sticky Page Header Bar (Flush with Navbar) */}
-      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md border-b border-slate-200/80 px-6 lg:px-8 py-3.5 mb-6 shadow-2xs">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md border-b border-slate-200/80 px-3.5 sm:px-6 lg:px-8 py-3 sm:py-3.5 mb-4 sm:mb-6 shadow-2xs">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
-                <LayoutDashboard className="w-5 h-5" />
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2 sm:gap-2.5 flex-wrap">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
+                <LayoutDashboard className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <span>Dashboard Operasional</span>
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 Live
               </span>
             </h1>
-            <p className="text-sm text-slate-500 mt-1 flex flex-wrap items-center gap-2">
-              <span>Ringkasan operasional penerimaan barang, saldo stok on-hand, dan antrean verifikasi fisik</span>
+            <p className="text-xs sm:text-sm text-slate-500 mt-1 flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <span>Ringkasan operasional penerimaan barang, saldo stok, dan verifikasi fisik</span>
               {lastUpdated && (
                 <>
                   <span className="hidden sm:inline text-slate-300">•</span>
@@ -153,13 +153,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-2.5 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 flex-wrap sm:flex-nowrap">
             <button
               type="button"
               onClick={() => fetchDashboardStats(true)}
               disabled={isRefreshing}
               title="Segarkan Data Dashboard"
-              className="p-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition shadow-sm cursor-pointer disabled:opacity-50"
+              className="p-2 sm:p-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition shadow-sm cursor-pointer disabled:opacity-50"
             >
               <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-emerald-600' : ''}`} />
             </button>
@@ -168,7 +168,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               <button
                 type="button"
                 onClick={onOpenCreateModal}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-sm hover:shadow transition transform active:scale-[0.99] cursor-pointer"
+                className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg font-semibold text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-sm hover:shadow transition transform active:scale-[0.99] cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>+ Buat Dokumen Baru</span>
@@ -179,7 +179,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               <button
                 type="button"
                 onClick={() => setIsBarcodeModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-sm hover:shadow transition transform active:scale-[0.99] cursor-pointer"
+                className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg font-semibold text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-sm hover:shadow transition transform active:scale-[0.99] cursor-pointer"
               >
                 <Barcode className="w-4 h-4" />
                 <span>Scan Barcode Penerimaan</span>
@@ -190,42 +190,42 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       </div>
 
       {/* 2. Main Content Body */}
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 pb-10 space-y-5">
+      <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 pb-10 space-y-4 sm:space-y-5">
 
       {/* 2. Compact 4 KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
         {/* Card 1: Dokumen Aktif */}
         <div
           onClick={() => onNavigate('receivings')}
-          className="group bg-white p-4 rounded-xl border border-slate-200/90 shadow-xs hover:border-blue-300 hover:shadow-sm transition-all cursor-pointer flex flex-col justify-between"
+          className="group bg-white p-3 sm:p-4 rounded-xl border border-slate-200/90 shadow-xs hover:border-blue-300 hover:shadow-sm transition-all cursor-pointer flex flex-col justify-between"
         >
           <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-medium">Dokumen Aktif</span>
-            <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600 group-hover:scale-105 transition-transform">
-              <Truck className="w-4 h-4" />
+            <span className="text-[11px] sm:text-xs font-medium">Dokumen Aktif</span>
+            <div className="p-1 sm:p-1.5 rounded-lg bg-blue-50 text-blue-600 group-hover:scale-105 transition-transform">
+              <Truck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="my-2">
-            <span className="text-2xl font-bold text-slate-900 tracking-tight">
+          <div className="my-1.5 sm:my-2">
+            <span className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
               {summary.activeDocuments}
             </span>
           </div>
-          <div className="flex items-center justify-between text-[11px] text-slate-500">
-            <span>{summary.inProgressDocuments} diproses · {summary.draftDocuments} draft</span>
-            <ArrowRight className="w-3 h-3 text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-slate-500">
+            <span className="truncate">{summary.inProgressDocuments} diproses · {summary.draftDocuments} draft</span>
+            <ArrowRight className="w-3 h-3 text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
           </div>
         </div>
 
         {/* Card 2: Fulfillment Rate */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-xs flex flex-col justify-between">
+        <div className="bg-white p-3 sm:p-4 rounded-xl border border-slate-200/90 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-medium">Akurasi Fisik</span>
-            <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600">
-              <CheckCircle2 className="w-4 h-4" />
+            <span className="text-[11px] sm:text-xs font-medium">Akurasi Fisik</span>
+            <div className="p-1 sm:p-1.5 rounded-lg bg-emerald-50 text-emerald-600">
+              <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="my-2">
-            <span className="text-2xl font-bold text-slate-900 tracking-tight">
+          <div className="my-1.5 sm:my-2">
+            <span className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
               {summary.fulfillmentRate}%
             </span>
           </div>
@@ -236,7 +236,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 style={{ width: `${Math.min(100, summary.fulfillmentRate)}%` }}
               />
             </div>
-            <span className="text-[10px] text-slate-400 mt-1 block">
+            <span className="text-[9px] sm:text-[10px] text-slate-400 mt-1 block truncate">
               {summary.completedItems}/{summary.totalItems} item tuntas
             </span>
           </div>
@@ -245,46 +245,46 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         {/* Card 3: Total Saldo Fisik */}
         <div
           onClick={() => onNavigate('inventory')}
-          className="group bg-white p-4 rounded-xl border border-slate-200/90 shadow-xs hover:border-teal-300 hover:shadow-sm transition-all cursor-pointer flex flex-col justify-between"
+          className="group bg-white p-3 sm:p-4 rounded-xl border border-slate-200/90 shadow-xs hover:border-teal-300 hover:shadow-sm transition-all cursor-pointer flex flex-col justify-between"
         >
           <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-medium">Saldo Fisik</span>
-            <div className="p-1.5 rounded-lg bg-teal-50 text-teal-600 group-hover:scale-105 transition-transform">
-              <Layers className="w-4 h-4" />
+            <span className="text-[11px] sm:text-xs font-medium">Saldo Fisik</span>
+            <div className="p-1 sm:p-1.5 rounded-lg bg-teal-50 text-teal-600 group-hover:scale-105 transition-transform">
+              <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="my-2">
-            <span className="text-2xl font-bold text-slate-900 tracking-tight">
+          <div className="my-1.5 sm:my-2">
+            <span className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
               {summary.totalPhysicalStock.toLocaleString('id-ID')}
             </span>
             <span className="text-xs font-normal text-slate-400 ml-1">unit</span>
           </div>
-          <div className="flex items-center justify-between text-[11px] text-slate-500">
-            <span>Stok fisik on-hand</span>
-            <ArrowRight className="w-3 h-3 text-teal-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-slate-500">
+            <span className="truncate">Stok fisik on-hand</span>
+            <ArrowRight className="w-3 h-3 text-teal-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
           </div>
         </div>
 
         {/* Card 4: Master Produk */}
         <div
           onClick={() => onNavigate('products')}
-          className="group bg-white p-4 rounded-xl border border-slate-200/90 shadow-xs hover:border-indigo-300 hover:shadow-sm transition-all cursor-pointer flex flex-col justify-between"
+          className="group bg-white p-3 sm:p-4 rounded-xl border border-slate-200/90 shadow-xs hover:border-indigo-300 hover:shadow-sm transition-all cursor-pointer flex flex-col justify-between"
         >
           <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-medium">Master SKU</span>
-            <div className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600 group-hover:scale-105 transition-transform">
-              <Boxes className="w-4 h-4" />
+            <span className="text-[11px] sm:text-xs font-medium">Master SKU</span>
+            <div className="p-1 sm:p-1.5 rounded-lg bg-indigo-50 text-indigo-600 group-hover:scale-105 transition-transform">
+              <Boxes className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="my-2">
-            <span className="text-2xl font-bold text-slate-900 tracking-tight">
+          <div className="my-1.5 sm:my-2">
+            <span className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
               {summary.totalProducts}
             </span>
             <span className="text-xs font-normal text-slate-400 ml-1">produk</span>
           </div>
-          <div className="flex items-center justify-between text-[11px] text-slate-500">
-            <span>{summary.completedDocuments} dokumen selesai</span>
-            <ArrowRight className="w-3 h-3 text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-slate-500">
+            <span className="truncate">{summary.completedDocuments} dokumen selesai</span>
+            <ArrowRight className="w-3 h-3 text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
           </div>
         </div>
       </div>

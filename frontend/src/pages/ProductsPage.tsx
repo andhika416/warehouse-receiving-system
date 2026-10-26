@@ -329,26 +329,26 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ onNotify }) => {
   return (
     <div className="font-sans text-slate-900">
       {/* 1. Fixed / Sticky Page Header Bar (Flush with Navbar) */}
-      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md border-b border-slate-200/80 px-6 lg:px-8 py-3.5 mb-6 shadow-2xs">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md border-b border-slate-200/80 px-3.5 sm:px-6 lg:px-8 py-3 sm:py-3.5 mb-4 sm:mb-6 shadow-2xs">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
-                <Boxes className="w-5 h-5" />
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2 sm:gap-2.5 flex-wrap">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
+                <Boxes className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <span>Master Data Produk</span>
             </h1>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-xs sm:text-sm text-slate-500 mt-1">
               Kelola katalog master SKU, nama barang, dan satuan kemasan fisik gudang
             </p>
           </div>
 
           {/* Top Right Action: Tombol Tambah Produk */}
-          <div className="flex items-center gap-2.5 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 flex-wrap sm:flex-nowrap">
             <button
               onClick={fetchProducts}
               title="Muat Ulang Data Produk"
-              className="p-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition shadow-sm cursor-pointer"
+              className="p-2 sm:p-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition shadow-sm cursor-pointer"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-600' : ''}`} />
             </button>
@@ -361,7 +361,7 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ onNotify }) => {
                 }
                 setIsAddModalOpen(true);
               }}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-sm hover:shadow transition transform active:scale-[0.99] cursor-pointer"
+              className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg font-semibold text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-sm hover:shadow transition transform active:scale-[0.99] cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>+ Tambah Produk Baru</span>
@@ -371,38 +371,38 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ onNotify }) => {
       </div>
 
       {/* 2. Main Body Content */}
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 pb-12 space-y-6">
+      <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 pb-12 space-y-4 sm:space-y-6">
         {/* KPI Stats Ribbon */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
-            <Boxes className="w-5 h-5" />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center gap-3.5">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+            <Boxes className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <div>
             <div className="text-xs font-medium text-slate-500">Total SKU Terdaftar</div>
-            <div className="text-xl font-bold text-slate-900">{totalSKUs} SKU</div>
+            <div className="text-lg sm:text-xl font-bold text-slate-900">{totalSKUs} SKU</div>
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-lg bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600">
-            <Layers className="w-5 h-5" />
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center gap-3.5">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600 shrink-0">
+            <Layers className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <div>
             <div className="text-xs font-medium text-slate-500">Total Stok Fisik Aktif</div>
-            <div className="text-xl font-bold text-slate-900">
+            <div className="text-lg sm:text-xl font-bold text-slate-900">
               {totalPhysicalQuantity.toLocaleString()} Unit Total
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
-            <CheckCircle2 className="w-5 h-5" />
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center gap-3.5">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+            <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <div>
             <div className="text-xs font-medium text-slate-500">Ketersediaan Stok Gudang</div>
-            <div className="text-xl font-bold text-slate-900">
+            <div className="text-lg sm:text-xl font-bold text-slate-900">
               {inStockCount} / {totalSKUs} SKU Tersedia
             </div>
           </div>
@@ -410,21 +410,21 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ onNotify }) => {
       </div>
 
       {/* 2. Filter & Search Toolbar */}
-      <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="bg-white p-3 sm:p-4 rounded-xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
         {/* Left side: Wide search bar */}
-        <div className="relative flex-1 max-w-lg">
+        <div className="relative flex-1 w-full md:max-w-lg">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5 pointer-events-none" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Cari berdasarkan SKU, nama produk..."
-            className="w-full pl-10 pr-9 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition shadow-inner"
+            className="w-full pl-10 pr-9 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition shadow-inner"
           />
           {search && (
             <button
               onClick={() => setSearch('')}
-              className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 cursor-pointer"
+              className="absolute right-3 top-2.5 sm:top-3 text-slate-400 hover:text-slate-600 cursor-pointer"
               title="Hapus pencarian"
             >
               <X className="w-4 h-4" />
@@ -433,9 +433,9 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ onNotify }) => {
         </div>
 
         {/* Right side: Category dropdown filter and Export CSV */}
-        <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
-          <div className="relative min-w-[190px]">
-            <Filter className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3 pointer-events-none" />
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap w-full md:w-auto">
+          <div className="relative flex-1 sm:flex-initial sm:min-w-[180px]">
+            <Filter className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
@@ -448,7 +448,7 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ onNotify }) => {
               <option value="IN_STOCK">Hanya SKU Tersedia</option>
               <option value="ZERO_STOCK">Stok Kosong (0)</option>
             </select>
-            <div className="absolute right-2.5 top-3 pointer-events-none text-slate-400">
+            <div className="absolute right-2.5 top-2.5 pointer-events-none text-slate-400">
               <ArrowUpDown className="w-3.5 h-3.5" />
             </div>
           </div>
@@ -464,8 +464,8 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ onNotify }) => {
 
       {/* 3. Data Table */}
       <div className="bg-white rounded-xl border border-slate-200/90 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm border-collapse">
+        <div className="overflow-x-auto -mx-0.5">
+          <table className="w-full min-w-[620px] text-left text-sm border-collapse">
             <thead className="bg-slate-50/90 border-b border-slate-200 text-xs font-semibold uppercase tracking-wider text-slate-600">
               <tr>
                 <th className="py-3.5 px-5">SKU</th>

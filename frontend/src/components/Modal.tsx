@@ -48,10 +48,10 @@ export const Modal: React.FC<ModalProps> = ({
   return (
     <div
       onClick={onClose}
-      className={`fixed inset-0 ${zIndex} flex items-center justify-center p-3 sm:p-4 ${backdropClassName} animate-fade-in overflow-y-auto`}
+      className={`fixed inset-0 ${zIndex} flex items-center justify-center p-2 sm:p-4 ${backdropClassName} animate-fade-in overflow-y-auto`}
     >
       <div
-        className={`w-full ${maxWidthClass} max-h-[92vh] flex flex-col rounded-2xl shadow-2xl p-5 sm:p-6 overflow-hidden transform transition-all ${
+        className={`w-full ${maxWidthClass} max-h-[94vh] flex flex-col rounded-xl sm:rounded-2xl shadow-2xl p-4 sm:p-6 overflow-hidden transform transition-all ${
           isLight
             ? 'bg-white border border-slate-200 text-slate-900'
             : 'bg-slate-900 border border-slate-800 text-slate-100'
@@ -59,12 +59,12 @@ export const Modal: React.FC<ModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         <div
-          className={`flex items-center justify-between pb-3 sm:pb-4 border-b mb-4 shrink-0 ${
+          className={`flex items-center justify-between pb-3 sm:pb-4 border-b mb-3 sm:mb-4 shrink-0 gap-2 ${
             isLight ? 'border-slate-100' : 'border-slate-800/80'
           }`}
         >
           <div
-            className={`text-lg font-bold tracking-tight flex items-center gap-2 ${
+            className={`text-base sm:text-lg font-bold tracking-tight flex items-center gap-2 min-w-0 flex-1 ${
               isLight ? 'text-slate-900' : 'text-white'
             }`}
           >
@@ -72,7 +72,7 @@ export const Modal: React.FC<ModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className={`p-1.5 rounded-lg transition cursor-pointer ${
+            className={`p-1.5 rounded-lg transition cursor-pointer shrink-0 ${
               isLight
                 ? 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800'

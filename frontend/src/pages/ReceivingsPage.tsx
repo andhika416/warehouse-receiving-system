@@ -401,25 +401,25 @@ export const ReceivingsPage: React.FC<ReceivingsPageProps> = ({
   return (
     <div className="font-sans text-slate-900">
       {/* 1. Fixed / Sticky Page Header Bar (Flush with Navbar) */}
-      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md border-b border-slate-200/80 px-6 lg:px-8 py-3.5 mb-6 shadow-2xs">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md border-b border-slate-200/80 px-3.5 sm:px-6 lg:px-8 py-3 sm:py-3.5 mb-4 sm:mb-6 shadow-2xs">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
-                <Truck className="w-5 h-5" />
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2 sm:gap-2.5 flex-wrap">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
+                <Truck className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <span>Dokumen Penerimaan Barang (Receiving)</span>
             </h1>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-xs sm:text-sm text-slate-500 mt-1">
               Manifes penerimaan fisik barang masuk dari vendor dan pemasok
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 flex-wrap sm:flex-nowrap">
             <button
               onClick={fetchDocuments}
               title="Muat Ulang Dokumen"
-              className="p-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition shadow-sm cursor-pointer"
+              className="p-2 sm:p-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition shadow-sm cursor-pointer"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-600' : ''}`} />
             </button>
@@ -427,7 +427,7 @@ export const ReceivingsPage: React.FC<ReceivingsPageProps> = ({
             {isSupervisor && (
               <button
                 onClick={() => setIsCreateModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-sm hover:shadow transition transform active:scale-[0.99] cursor-pointer"
+                className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg font-semibold text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-sm hover:shadow transition transform active:scale-[0.99] cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>+ Buat Dokumen Baru</span>
@@ -438,60 +438,60 @@ export const ReceivingsPage: React.FC<ReceivingsPageProps> = ({
       </div>
 
       {/* 2. Main Body Content */}
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 pb-12 space-y-6">
+      <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 pb-12 space-y-4 sm:space-y-6">
         {/* 2. KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center justify-between">
           <div>
             <div className="text-xs font-medium text-slate-500">Total Dokumen Penerimaan</div>
-            <div className="text-2xl font-bold text-slate-900 mt-0.5 font-mono">{totalCount} Dokumen</div>
+            <div className="text-xl sm:text-2xl font-bold text-slate-900 mt-0.5 font-mono">{totalCount} Dokumen</div>
           </div>
-          <div className="w-10 h-10 rounded-lg bg-slate-50 border border-slate-200/70 flex items-center justify-center text-slate-600">
-            <FileText className="w-5 h-5" />
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-slate-50 border border-slate-200/70 flex items-center justify-center text-slate-600 shrink-0">
+            <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center justify-between">
           <div>
             <div className="text-xs font-medium text-slate-500">Sedang Berjalan (In Progress)</div>
-            <div className="text-2xl font-bold text-amber-600 mt-0.5 font-mono">
+            <div className="text-xl sm:text-2xl font-bold text-amber-600 mt-0.5 font-mono">
               {inProgressCount} Dokumen
             </div>
           </div>
-          <div className="w-10 h-10 rounded-lg bg-amber-50 border border-amber-200/70 flex items-center justify-center text-amber-600">
-            <Clock className="w-5 h-5" />
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-amber-50 border border-amber-200/70 flex items-center justify-center text-amber-600 shrink-0">
+            <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+        <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center justify-between">
           <div>
             <div className="text-xs font-medium text-slate-500">Selesai Diverifikasi (Completed)</div>
-            <div className="text-2xl font-bold text-emerald-600 mt-0.5 font-mono">
+            <div className="text-xl sm:text-2xl font-bold text-emerald-600 mt-0.5 font-mono">
               {completedCount} Dokumen
             </div>
           </div>
-          <div className="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-200/70 flex items-center justify-center text-emerald-600">
-            <CheckCircle2 className="w-5 h-5" />
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-emerald-50 border border-emerald-200/70 flex items-center justify-center text-emerald-600 shrink-0">
+            <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
         </div>
       </div>
 
       {/* 3. Filter Bar & Search Toolbar */}
-      <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="bg-white p-3 sm:p-4 rounded-xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
         {/* Left: Search input */}
-        <div className="relative flex-1 max-w-lg">
+        <div className="relative flex-1 w-full md:max-w-lg">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5 pointer-events-none" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Cari berdasarkan No. Dokumen (RCV-...) atau nama supervisor..."
-            className="w-full pl-10 pr-9 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition shadow-inner"
+            className="w-full pl-10 pr-9 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition shadow-inner"
           />
           {search && (
             <button
               onClick={() => setSearch('')}
-              className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 cursor-pointer"
+              className="absolute right-3 top-2.5 sm:top-3 text-slate-400 hover:text-slate-600 cursor-pointer"
               title="Hapus pencarian"
             >
               <X className="w-4 h-4" />
@@ -500,9 +500,9 @@ export const ReceivingsPage: React.FC<ReceivingsPageProps> = ({
         </div>
 
         {/* Right side: Status Dropdown Filter and Export Action Buttons */}
-        <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
-          <div className="relative min-w-[170px]">
-            <Filter className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3 pointer-events-none" />
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap w-full md:w-auto">
+          <div className="relative flex-1 sm:flex-initial sm:min-w-[160px]">
+            <Filter className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
@@ -513,7 +513,7 @@ export const ReceivingsPage: React.FC<ReceivingsPageProps> = ({
               <option value="IN_PROGRESS">Sedang Berjalan</option>
               <option value="COMPLETED">Selesai</option>
             </select>
-            <div className="absolute right-2.5 top-3 pointer-events-none text-slate-400">
+            <div className="absolute right-2.5 top-2.5 pointer-events-none text-slate-400">
               <ArrowUpDown className="w-3.5 h-3.5" />
             </div>
           </div>
@@ -529,8 +529,8 @@ export const ReceivingsPage: React.FC<ReceivingsPageProps> = ({
 
       {/* 4. Documents Table */}
       <div className="bg-white rounded-xl border border-slate-200/90 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm border-collapse">
+        <div className="overflow-x-auto -mx-0.5">
+          <table className="w-full min-w-[620px] text-left text-sm border-collapse">
             <thead className="bg-slate-50/90 border-b border-slate-200 text-xs font-semibold uppercase tracking-wider text-slate-600">
               <tr>
                 <th className="py-3.5 px-5">No. Dokumen</th>
@@ -910,9 +910,9 @@ export const ReceivingsPage: React.FC<ReceivingsPageProps> = ({
               {docItems.map((item, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center gap-2.5 p-3 rounded-lg bg-slate-50 border border-slate-200/90"
+                  className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-2.5 p-3 rounded-lg bg-slate-50 border border-slate-200/90"
                 >
-                  <div className="flex-1">
+                  <div className="flex-1 w-full">
                     <select
                       value={item.productId}
                       onChange={(e) => handleItemChange(idx, 'productId', e.target.value)}
@@ -926,29 +926,31 @@ export const ReceivingsPage: React.FC<ReceivingsPageProps> = ({
                     </select>
                   </div>
 
-                  <div className="w-36">
-                    <input
-                      type="number"
-                      min={1}
-                      required
-                      value={item.expectedQuantity}
-                      onChange={(e) =>
-                        handleItemChange(idx, 'expectedQuantity', Math.max(1, parseInt(e.target.value) || 1))
-                      }
-                      placeholder="Target Qty"
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 font-mono text-right focus:outline-none focus:border-emerald-500 text-xs shadow-sm"
-                    />
-                  </div>
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <div className="flex-1 sm:w-36">
+                      <input
+                        type="number"
+                        min={1}
+                        required
+                        value={item.expectedQuantity}
+                        onChange={(e) =>
+                          handleItemChange(idx, 'expectedQuantity', Math.max(1, parseInt(e.target.value) || 1))
+                        }
+                        placeholder="Target Qty"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 font-mono text-right focus:outline-none focus:border-emerald-500 text-xs shadow-sm"
+                      />
+                    </div>
 
-                  <button
-                    type="button"
-                    disabled={docItems.length <= 1}
-                    onClick={() => handleRemoveItemRow(idx)}
-                    title="Hapus baris item"
-                    className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-30 rounded-lg transition cursor-pointer"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                    <button
+                      type="button"
+                      disabled={docItems.length <= 1}
+                      onClick={() => handleRemoveItemRow(idx)}
+                      title="Hapus baris item"
+                      className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-30 rounded-lg transition cursor-pointer shrink-0"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
